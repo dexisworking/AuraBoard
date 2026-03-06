@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuraBoard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            transitionDuration: {
+              '1500': '1500ms',
+              '2000': '2000ms',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      /* Ensure no scroll and full black background */
+      html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
+        width: 100%;
+        height: 100%;
+      }
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/screensaver-main.jsx"></script>
+  </body>
+</html>

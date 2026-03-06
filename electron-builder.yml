@@ -1,0 +1,36 @@
+appId: com.auraboard.app
+productName: AuraBoard
+copyright: Copyright © 2026 AuraBoard
+
+directories:
+  buildResources: assets
+  output: release
+
+files:
+  - out/**/*
+  - assets/**/*
+  - package.json
+  - "!node_modules/**/*"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/tray-icon.png
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: AuraBoard
+  include: installer.nsh
+  installerIcon: assets/tray-icon.png
+
+extraResources:
+  - from: assets/
+    to: assets/
+    filter:
+      - "**/*"
