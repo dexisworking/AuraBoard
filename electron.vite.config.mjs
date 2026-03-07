@@ -16,7 +16,7 @@ export default defineConfig({
         fileName: () => 'index.cjs',
       },
       rollupOptions: {
-        external: ['electron', 'electron-store', 'path', 'fs', 'url', 'node:path', 'node:fs', 'node:url', 'node:module'],
+        external: ['electron', 'electron-store', 'path', 'fs', 'url', 'node:path', 'node:fs', 'node:url', 'node:module', 'node:http', 'node:crypto'],
       },
     },
   },
