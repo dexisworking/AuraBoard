@@ -25,13 +25,20 @@ function timeAgo(dateStr) {
 
 const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
-export default function NewsWidget() {
+export default function NewsWidget({ variant = 'ticker' }) {
   const [headlines, setHeadlines] = useState([]);
   const [source, setSource] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(null); // index of expanded headline
+  const [rotate, setRotate] = useState(0); // headline variant rotation
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (variant !== 'headline' || headlines.length === 0) return undefined;
+    const id = setInterval(() => setRotate((r) => (r + 1) % headlines.length), 7000);
+    return () => clearInterval(id);
+  }, [variant, headlines.length]);
 
   const fetchNews = useCallback(async () => {
     try {
@@ -125,6 +132,41 @@ export default function NewsWidget() {
     );
   }
 
+  // ── HEADLINE: one big rotating headline ──
+  if (variant === 'headline' && headlines.length > 0) {
+    const h = headlines[rotate % headlines.length];
+    return (
+      <div className="ab-widget-root">
+        <WidgetHeader title="News" meta={source} />
+        <div className="flex-1 flex flex-col justify-center min-h-0" style={{ transition: 'opacity 0.4s' }}>
+          <h3 className="news-expanded-title" style={{ WebkitLineClamp: 4 }}>{h.title}</h3>
+          <div className="news-expanded-meta" style={{ marginTop: '0.6em' }}>
+            <span className="news-expanded-source">{h.source}</span>
+            <span className="news-expanded-time">{h.publishedAt && timeAgo(h.publishedAt)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LIST: stacked headlines ──
+  if (variant === 'list') {
+    return (
+      <div className="ab-widget-root">
+        <WidgetHeader title="News" meta={source} />
+        <div className="news-list">
+          {headlines.slice(0, 6).map((h, i) => (
+            <div key={i} className="news-list-item">
+              <span className="news-list-dot">—</span>
+              <span className="news-list-title">{h.title}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── TICKER (default) ──
   return (
     <div className="ab-widget-root">
       <WidgetHeader title="News" meta={source} />

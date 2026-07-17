@@ -107,6 +107,19 @@
 
 .spotify-track-info { min-width: 0; flex: 1; }
 
+/* ── minimal variant ── */
+.spotify-min-title {
+  font-family: var(--ab-font-ui);
+  font-variation-settings: 'wdth' 80, 'wght' 800;
+  font-size: 1.7em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: var(--ab-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .spotify-track-name {
   font-family: var(--ab-font-ui);
   font-variation-settings: 'wdth' 82, 'wght' 800;

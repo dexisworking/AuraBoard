@@ -51,7 +51,7 @@ function formatTime(ms) {
 
 // ── Component ────────────────────────────────────────────────────────────
 
-export default function SpotifyWidget({ pollInterval = 3, onTrackUpdate }) {
+export default function SpotifyWidget({ pollInterval = 3, onTrackUpdate, variant = 'full' }) {
   const [authed, setAuthed] = useState(null); // null = loading
   const [track, setTrack] = useState(null);
   const [error, setError] = useState(null);
@@ -249,6 +249,46 @@ export default function SpotifyWidget({ pollInterval = 3, onTrackUpdate }) {
   // ── Now playing ─────────────────────────────────────────────────────
   const progress = Math.min(displayProgress, track.durationMs);
   const progressPct = track.durationMs > 0 ? (progress / track.durationMs) * 100 : 0;
+
+  // ── MINIMAL: marquee title + artist, no art ──
+  if (variant === 'minimal') {
+    return (
+      <div className="spotify-widget">
+        <div className="spotify-now-playing" style={{ justifyContent: 'center' }}>
+          <div className="spotify-min-title">{track.name}</div>
+          <div className="spotify-track-artist">{track.artist}</div>
+          <div className="spotify-progress-bar" style={{ marginTop: '0.6em' }}>
+            <div className="spotify-progress-fill" style={{ width: `${progressPct}%` }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── COMPACT: art + title + play control ──
+  if (variant === 'compact') {
+    return (
+      <div className="spotify-widget">
+        <div className="spotify-now-playing" style={{ justifyContent: 'center' }}>
+          <div className="spotify-track-row">
+            {track.albumArt
+              ? <img className="spotify-album-art" src={track.albumArt} alt="Album art" />
+              : <div className="spotify-album-placeholder"><SpotifyLogo /></div>}
+            <div className="spotify-track-info">
+              <div className="spotify-track-name">{track.name}</div>
+              <div className="spotify-track-artist">{track.artist}</div>
+            </div>
+            <button className="spotify-ctrl-btn play-btn widget-no-drag" onClick={handlePlayPause}>
+              {track.isPlaying ? <PauseIcon /> : <PlayIcon />}
+            </button>
+          </div>
+          <div className="spotify-progress-bar" style={{ marginTop: '0.7em' }}>
+            <div className="spotify-progress-fill" style={{ width: `${progressPct}%` }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="spotify-widget">

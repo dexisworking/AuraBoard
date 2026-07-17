@@ -26,7 +26,7 @@ function isMarketOpen() {
   return totalMins >= 570 && totalMins < 960; // 9:30=570, 16:00=960
 }
 
-export default function StocksWidget() {
+export default function StocksWidget({ variant = 'list' }) {
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -151,17 +151,60 @@ export default function StocksWidget() {
     );
   }
 
+  const statusMeta = (
+    <span className={`stocks-market-status ${marketOpen ? 'open' : 'closed'}`}>
+      <span className="stocks-status-dot" />
+      {marketOpen ? 'Open' : 'Closed'}
+    </span>
+  );
+
+  // ── FOCUS: one ticker, big price ──
+  if (variant === 'focus' && stocks.length > 0) {
+    const s = stocks[0];
+    const up = s.change >= 0;
+    return (
+      <div className="ab-widget-root">
+        <WidgetHeader title={s.symbol} meta={statusMeta} />
+        <div className="flex-1 flex flex-col justify-center min-h-0">
+          <span className="ab-figure text-ink" style={{ fontSize: '2.6em', lineHeight: 1 }}>
+            {s.error ? '—' : `$${s.price.toFixed(2)}`}
+          </span>
+          {!s.error && (
+            <span className={`stocks-change ${up ? 'up' : 'down'}`} style={{ fontSize: '1em', marginTop: '0.3em' }}>
+              {up ? '▲' : '▼'} ${Math.abs(s.change).toFixed(2)} ({Math.abs(s.changePercent).toFixed(2)}%)
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── TICKER: scrolling price strip ──
+  if (variant === 'ticker') {
+    const row = stocks.map((s) => {
+      const up = s.change >= 0;
+      return (
+        <span key={s.symbol} className="stocks-ticker-item">
+          <span className="stocks-symbol">{s.symbol}</span>
+          <span className="stocks-price" style={{ margin: '0 0.4em' }}>{s.error ? '—' : `$${s.price.toFixed(2)}`}</span>
+          {!s.error && <span className={`stocks-change ${up ? 'up' : 'down'}`}>{up ? '+' : '−'}{Math.abs(s.changePercent).toFixed(1)}%</span>}
+        </span>
+      );
+    });
+    return (
+      <div className="ab-widget-root">
+        <WidgetHeader title="Stocks" meta={statusMeta} />
+        <div className="flex-1 flex items-center overflow-hidden min-h-0">
+          <div className="stocks-ticker">{row}{row}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LIST (default) ──
   return (
     <div className="ab-widget-root">
-      <WidgetHeader
-        title="Stocks"
-        meta={(
-          <span className={`stocks-market-status ${marketOpen ? 'open' : 'closed'}`}>
-            <span className="stocks-status-dot" />
-            {marketOpen ? 'Open' : 'Closed'}
-          </span>
-        )}
-      />
+      <WidgetHeader title="Stocks" meta={statusMeta} />
 
       <div className="stocks-list">
         {stocks.map((s) => {

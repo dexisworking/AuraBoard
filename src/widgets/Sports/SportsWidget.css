@@ -83,6 +83,24 @@
   color: var(--ab-ink-tertiary);
 }
 
+/* ── next-up variant ── */
+.sports-next-team {
+  font-family: var(--ab-font-ui);
+  font-variation-settings: 'wdth' 82, 'wght' 800;
+  font-size: 1.6em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--ab-ink);
+}
+
+.sports-next-vs {
+  font-family: var(--ab-font-micro);
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--ab-accent);
+}
+
 /* ── headline ticker: mono marquee over a hairline ── */
 .sports-ticker-container {
   flex-shrink: 0;

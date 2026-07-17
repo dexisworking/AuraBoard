@@ -23,7 +23,7 @@ const wmoLabel = (code) => WMO_LABELS[code] || 'Unknown';
  * condition and location as tracked-out captions, three-day forecast as a
  * hairline-ruled column row. No icons, no cards, no shadows.
  */
-export default function WeatherWidget({ city = '', useFahrenheit = false }) {
+export default function WeatherWidget({ city = '', useFahrenheit = false, variant = 'full' }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -100,6 +100,43 @@ export default function WeatherWidget({ city = '', useFahrenheit = false }) {
     fontFamily: 'var(--ab-font-micro)', fontSize: '0.9em', fontWeight: 600,
     letterSpacing: '0.14em', textTransform: 'uppercase',
   };
+
+  // ── MINIMAL: giant temperature only ──
+  if (variant === 'minimal') {
+    return (
+      <div
+        className="w-full h-full flex flex-col justify-center text-ink"
+        style={{ padding: '4cqmin 5cqmin', fontSize: 'min(34cqh, 22cqw)' }}
+      >
+        <span className="ab-numeric" style={{ fontSize: '1em', lineHeight: 0.85 }}>
+          {Math.round(current.temperature_2m)}<span className="text-accent">°</span>
+        </span>
+        <span style={{ ...micro, fontSize: '0.14em', marginTop: '0.2em' }} className="text-ink-tertiary">
+          {wmoLabel(current.weathercode)} · {locationName || 'Local area'}
+        </span>
+      </div>
+    );
+  }
+
+  // ── COMPACT: temp + condition + location ──
+  if (variant === 'compact') {
+    return (
+      <div
+        className="w-full h-full flex flex-col justify-center text-ink"
+        style={{ padding: '4cqmin 5cqmin', fontSize: 'min(13cqh, 6cqw)' }}
+      >
+        <div className="flex items-end" style={{ gap: '0.6em' }}>
+          <span className="ab-numeric" style={{ fontSize: '3.4em', lineHeight: 0.85 }}>
+            {Math.round(current.temperature_2m)}<span className="text-accent">°</span>
+          </span>
+        </div>
+        <div className="ab-rule-h" style={{ marginTop: '0.5em', paddingTop: '0.5em' }}>
+          <span style={micro} className="text-ink">{wmoLabel(current.weathercode)}</span>
+          <span style={{ ...micro, marginLeft: '0.6em' }} className="text-ink-tertiary">{locationName || 'Local area'}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

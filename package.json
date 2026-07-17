@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "AuraBoard — Smart ambient display screensaver for Windows",
+  "author": "AuraBoard",
   "main": "out/main/main.js",
   "scripts": {
     "dev": "electron-vite dev",

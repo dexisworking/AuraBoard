@@ -39,7 +39,7 @@ function formatMatchTime(timeStr) {
   return `${h12}:${m} ${ampm}`;
 }
 
-export default function SportsWidget() {
+export default function SportsWidget({ variant = 'fixtures' }) {
   const [fixtures, setFixtures] = useState([]);
   const [espnHeadlines, setEspnHeadlines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +134,40 @@ export default function SportsWidget() {
     );
   }
 
+  // ── NEXT UP: single next match, large ──
+  if (variant === 'next' && fixtures.length > 0) {
+    const f = fixtures[0];
+    const hasScore = f.homeScore !== null && f.awayScore !== null;
+    return (
+      <div className="ab-widget-root">
+        <WidgetHeader title="Sports" meta={f.league} />
+        <div className="flex-1 flex flex-col justify-center min-h-0" style={{ gap: '0.4em' }}>
+          <span className="sports-next-team">{f.homeTeam}</span>
+          <span className="sports-next-vs">{hasScore ? `${f.homeScore} – ${f.awayScore}` : 'VS'}</span>
+          <span className="sports-next-team">{f.awayTeam}</span>
+          <span className="sports-fixture-meta" style={{ marginTop: '0.4em' }}>{f.date} {f.time && `· ${f.time}`}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ── TICKER: ESPN headline strip only ──
+  if (variant === 'ticker') {
+    const items = espnHeadlines.length > 0 ? espnHeadlines : fixtures.map((f) => `${f.homeTeam} vs ${f.awayTeam}`);
+    return (
+      <div className="ab-widget-root">
+        <WidgetHeader title="Sports" />
+        <div className="flex-1 flex items-center overflow-hidden min-h-0">
+          <div className="sports-ticker">
+            {items.map((h, i) => (<span key={i} className="sports-ticker-item"><span className="sports-ticker-dot">•</span> {h}</span>))}
+            {items.map((h, i) => (<span key={`d${i}`} className="sports-ticker-item"><span className="sports-ticker-dot">•</span> {h}</span>))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── FIXTURES (default) ──
   return (
     <div className="ab-widget-root">
       <WidgetHeader title="Sports" />

@@ -80,6 +80,25 @@
 .crypto-change.up { color: var(--ab-positive); }
 .crypto-change.down { color: var(--ab-negative); }
 
+/* ── ticker variant ── */
+.crypto-ticker {
+  display: flex;
+  gap: 2em;
+  white-space: nowrap;
+  width: max-content;
+  animation: crypto-ticker-scroll 40s linear infinite;
+}
+
+.crypto-ticker-item {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+@keyframes crypto-ticker-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
 @keyframes crypto-flash {
   0%, 100% { background: transparent; }
   50% { background: var(--ab-edit-surface, rgba(127, 127, 127, 0.10)); }

@@ -40,7 +40,7 @@ function Sparkline({ data, color, width = 80, height = 28 }) {
   );
 }
 
-export default function CryptoWidget() {
+export default function CryptoWidget({ variant = 'list' }) {
   const [coins, setCoins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -120,6 +120,55 @@ export default function CryptoWidget() {
     );
   }
 
+  const fmtPrice = (v) => (v >= 1
+    ? v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : v.toFixed(4));
+
+  // ── FOCUS: one coin, big price ──
+  if (variant === 'focus' && coins.length > 0) {
+    const c = coins[0];
+    const up = c.price_change_percentage_24h >= 0;
+    return (
+      <div className="ab-widget-root">
+        <WidgetHeader title={c.symbol.toUpperCase()} meta="USD" />
+        <div className="flex-1 flex flex-col justify-center min-h-0">
+          <span className="ab-figure text-ink" style={{ fontSize: '2.6em', lineHeight: 1 }}>
+            ${fmtPrice(c.current_price)}
+          </span>
+          <span className={`crypto-change ${up ? 'up' : 'down'}`} style={{ fontSize: '1em', marginTop: '0.3em' }}>
+            {up ? '▲' : '▼'} {Math.abs(c.price_change_percentage_24h).toFixed(2)}% · 24H
+          </span>
+          <div style={{ marginTop: '0.6em' }}>
+            <Sparkline data={c.sparkline_in_7d?.price} color={up ? 'var(--ab-positive)' : 'var(--ab-negative)'} width={220} height={44} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── TICKER: scrolling price strip ──
+  if (variant === 'ticker') {
+    const row = coins.slice(0, 8).map((c) => {
+      const up = c.price_change_percentage_24h >= 0;
+      return (
+        <span key={c.id} className="crypto-ticker-item">
+          <span className="crypto-symbol">{c.symbol.toUpperCase()}</span>
+          <span className="crypto-price" style={{ margin: '0 0.4em' }}>${fmtPrice(c.current_price)}</span>
+          <span className={`crypto-change ${up ? 'up' : 'down'}`}>{up ? '+' : '−'}{Math.abs(c.price_change_percentage_24h).toFixed(1)}%</span>
+        </span>
+      );
+    });
+    return (
+      <div className="ab-widget-root">
+        <WidgetHeader title="Crypto" meta="USD" />
+        <div className="flex-1 flex items-center overflow-hidden min-h-0">
+          <div className="crypto-ticker">{row}{row}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LIST (default) ──
   return (
     <div className="ab-widget-root">
       <WidgetHeader title="Crypto" meta="USD" />

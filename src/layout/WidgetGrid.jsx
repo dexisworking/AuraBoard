@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import GridLayout from 'react-grid-layout';
-import { getWidget, getDefaultLayout } from '../widgets/registry';
+import { getWidget, getDefaultLayout, getDefaultVariant, GRID_ROWS } from '../widgets/registry';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -61,11 +61,14 @@ function normalizeLayout(layoutInput) {
       const maxH = isNumber(item.maxH) ? item.maxH : (isNumber(metaMaxH) ? metaMaxH : DEFAULT_MAX_GRID_HEIGHT);
       const z = isNumber(item.z) ? item.z : index + 1;
 
+      // Bound every widget to the fixed GRID_COLS × GRID_ROWS grid so nothing
+      // can be dragged or resized off-screen and lost.
       const normalizedMaxW = Math.min(maxW, COLS);
+      const normalizedMaxH = Math.min(maxH, GRID_ROWS);
       const normalizedW = clamp(Math.round(item.w), minW, normalizedMaxW);
-      const normalizedH = clamp(Math.round(item.h), minH, maxH);
+      const normalizedH = clamp(Math.round(item.h), minH, normalizedMaxH);
       const normalizedX = clamp(Math.round(item.x), 0, Math.max(0, COLS - normalizedW));
-      const normalizedY = Math.max(0, Math.round(item.y));
+      const normalizedY = clamp(Math.round(item.y), 0, Math.max(0, GRID_ROWS - normalizedH));
 
       return {
         ...item,
@@ -76,7 +79,7 @@ function normalizeLayout(layoutInput) {
         minW,
         minH,
         maxW: normalizedMaxW,
-        maxH,
+        maxH: normalizedMaxH,
         z,
       };
     });
@@ -133,16 +136,16 @@ function RemoveButton({ onClick }) {
     <button
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       style={{
-        position: 'absolute', top: 6, right: 6, zIndex: 50,
-        width: 24, height: 24, borderRadius: '50%',
-        background: 'rgba(239,68,68,0.85)', border: 'none',
-        color: '#fff', fontSize: 14, lineHeight: '24px',
-        cursor: 'pointer', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-        transition: 'transform 0.15s',
+        position: 'absolute', top: 8, right: 8, zIndex: 50,
+        width: 24, height: 24, borderRadius: 0,
+        background: 'var(--ab-accent, #FF2B12)', border: 'none',
+        color: 'var(--ab-accent-ink, #fff)', fontSize: 13, lineHeight: '24px',
+        fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'opacity 0.15s',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.75'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
       title="Remove widget"
     >
       ✕
@@ -154,14 +157,15 @@ function RemoveButton({ onClick }) {
 function EditBanner() {
   return (
     <div style={{
-      position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
-      zIndex: 9999, padding: '8px 24px', borderRadius: 999,
-      background: 'var(--ab-accent, #6366f1)', backdropFilter: 'blur(12px)',
-      color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
-      letterSpacing: '0.05em', boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+      position: 'fixed', top: 72, left: '50%', transform: 'translateX(-50%)',
+      zIndex: 9999, padding: '7px 18px', borderRadius: 0,
+      background: 'var(--ab-accent, #FF2B12)',
+      color: 'var(--ab-accent-ink, #fff)', fontSize: 11, fontWeight: 600,
+      fontFamily: 'var(--ab-font-micro, monospace)',
+      letterSpacing: '0.18em', textTransform: 'uppercase',
       pointerEvents: 'none', userSelect: 'none',
     }}>
-      EDIT MODE — drag & resize from borders · press Alt+E to exit
+      Edit Mode — drag &amp; resize · Alt+E to exit
     </div>
   );
 }
@@ -173,6 +177,8 @@ export default function WidgetGrid({
   onRemoveWidget,
   onLayoutDraftChange,
   spotifyProps = {},
+  widgetConfig = {},
+  userName = '',
   reloadTrigger = 0, // changes to this value trigger a layout reload
 }) {
   const [layout, setLayout] = useState(null);
@@ -374,27 +380,24 @@ export default function WidgetGrid({
   if (!mounted || !layout || !widthReady || !width) return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
 
   /* ── build the set of visible layout items (only enabled widgets) ── */
+  // Keep a STABLE DOM order (enabled/layout order). Stacking is expressed via
+  // CSS z-index on each item — never by re-sorting, which would reorder the DOM
+  // mid-drag and break the resize/drag interaction.
   const enabledSet = new Set(enabledWidgets);
   const visibleLayout = layout
     .filter((l) => enabledSet.has(l.i))
     .map((l) => ({
       ...l,
       static: !editMode,
-    }))
-    .sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+    }));
 
-  /* ── dynamic rowHeight: scale rows so the layout fills the viewport height ──
-     rowHeight = usableHeight / maxRow, where maxRow is the tallest row the
-     current layout reaches. This keeps the board full-bleed regardless of how
-     many rows a layout uses, and keeps ScaleWrapper's base cell aspect close to
-     the real cell (less letterboxing). Falls back to ROW_HEIGHT before measure. */
-  const maxRow = visibleLayout.reduce(
-    (m, it) => Math.max(m, (Number(it.y) || 0) + (Number(it.h) || 1)),
-    0,
-  ) || 1;
-  const usableHeight = containerHeight - MARGIN[1] * (maxRow + 1);
+  /* ── fixed rowHeight: the grid is a constant GRID_ROWS-tall cell grid, like an
+     Android home screen. rowHeight depends ONLY on the container height, never
+     on the live layout — so dragging or resizing a widget never reflows the
+     others (that mid-interaction reflow was the source of editor instability). */
+  const usableHeight = containerHeight - MARGIN[1] * (GRID_ROWS + 1);
   const rowHeight = (containerHeight > 0 && usableHeight > 0)
-    ? Math.max(28, usableHeight / maxRow)
+    ? Math.max(28, usableHeight / GRID_ROWS)
     : ROW_HEIGHT;
 
   /* ── render each widget inside the grid ── */
@@ -404,12 +407,24 @@ export default function WidgetGrid({
 
     const Component = meta.component;
 
-    // build props for each widget type
-    let widgetProps = {};
-    if (item.i === 'greeting') widgetProps = { userName: 'Dex' };
-    if (item.i === 'clock') widgetProps = { use24hr: false };
-    if (item.i === 'weather') widgetProps = { useFahrenheit: false };
-    if (item.i === 'spotify') widgetProps = { pollInterval: 3, ...spotifyProps };
+    // Build props from per-widget config (variant + instance settings),
+    // replacing the old hardcoded values.
+    const cfg = widgetConfig[item.i] || {};
+    const variant = cfg.variant || getDefaultVariant(item.i);
+    const widgetProps = { variant };
+    if (item.i === 'greeting') widgetProps.userName = cfg.userName ?? userName;
+    if (item.i === 'clock') {
+      widgetProps.use24hr = cfg.use24hr ?? false;
+      if (cfg.timeZone) widgetProps.timeZone = cfg.timeZone;
+    }
+    if (item.i === 'weather') {
+      widgetProps.useFahrenheit = cfg.useFahrenheit ?? false;
+      if (cfg.city) widgetProps.city = cfg.city;
+    }
+    if (item.i === 'spotify') {
+      widgetProps.pollInterval = cfg.pollInterval ?? 3;
+      Object.assign(widgetProps, spotifyProps);
+    }
 
     return (
       <div
@@ -455,6 +470,7 @@ export default function WidgetGrid({
         className={`widget-grid ${editMode ? 'is-editing' : ''}`}
         layout={visibleLayout}
         cols={COLS}
+        maxRows={GRID_ROWS}
         rowHeight={rowHeight}
         width={width}
         margin={MARGIN}
@@ -467,7 +483,7 @@ export default function WidgetGrid({
         compactType={null}
         allowOverlap
         preventCollision={false}
-        isBounded={false}
+        isBounded
         onLayoutChange={handleLayoutChange}
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}

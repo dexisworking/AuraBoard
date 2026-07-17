@@ -19,23 +19,39 @@ function formatInterval(seconds) {
   return `${minutes} min ${remainingSeconds} sec`;
 }
 
-/* ── Toggle Switch component ── */
+/* ── Toggle Switch component — Swiss/Brutalist: square track, accent fill ── */
 function ToggleSwitch({ checked, onChange, label, description }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-6">
       <div>
-        <p className="text-sm font-medium text-white">{label}</p>
-        {description && <p className="text-xs text-white/50">{description}</p>}
+        <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-ink">
+          {label}
+        </p>
+        {description && (
+          <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-ink-tertiary font-micro">
+            {description}
+          </p>
+        )}
       </div>
-      <label className="relative inline-flex items-center cursor-pointer">
-        <input
-          type="checkbox"
-          className="sr-only peer"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className="relative h-6 w-12 shrink-0 border transition-colors duration-200"
+        style={{
+          borderColor: 'var(--ab-rule-strong)',
+          background: checked ? 'var(--ab-accent)' : 'transparent',
+        }}
+      >
+        <span
+          className="absolute top-[2px] h-[18px] w-[18px] transition-all duration-200"
+          style={{
+            left: checked ? 'calc(100% - 20px)' : '2px',
+            background: checked ? 'var(--ab-accent-ink)' : 'var(--ab-ink)',
+          }}
         />
-        <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500 shadow-inner"></div>
-      </label>
+      </button>
     </div>
   );
 }
@@ -45,7 +61,17 @@ const PRESETS = {
   full: {
     label: 'Full Board',
     description: 'All widgets visible',
-    widgets: ['clock', 'date', 'greeting', 'weather', 'spotify', 'news', 'crypto', 'stocks', 'sports'],
+    widgets: [
+      'clock',
+      'date',
+      'greeting',
+      'weather',
+      'spotify',
+      'news',
+      'crypto',
+      'stocks',
+      'sports',
+    ],
   },
   minimal: {
     label: 'Minimal Clock',
@@ -89,15 +115,22 @@ export default function SettingsApp() {
 
   // Phase 5 state
   const [enabledWidgets, setEnabledWidgets] = useState([
-    'clock', 'date', 'greeting', 'weather', 'spotify',
+    'clock',
+    'date',
+    'greeting',
+    'weather',
+    'spotify',
   ]);
   const [gnewsApiKey, setGnewsApiKey] = useState('');
   const [alphaVantageApiKey, setAlphaVantageApiKey] = useState('');
   const [stockSymbols, setStockSymbols] = useState('AAPL,MSFT,GOOGL,AMZN,TSLA');
-  const [cryptoCoinIds, setCryptoCoinIds] = useState('bitcoin,ethereum,solana,binancecoin,cardano');
+  const [cryptoCoinIds, setCryptoCoinIds] = useState(
+    'bitcoin,ethereum,solana,binancecoin,cardano',
+  );
   const [sportsLeagues, setSportsLeagues] = useState('4387,4328');
   const [availableDisplays, setAvailableDisplays] = useState([]);
-  const [screensaverUseAllDisplays, setScreensaverUseAllDisplays] = useState(true);
+  const [screensaverUseAllDisplays, setScreensaverUseAllDisplays] =
+    useState(true);
   const [screensaverDisplayIds, setScreensaverDisplayIds] = useState([]);
 
   const allWidgets = useMemo(() => getAllWidgets(), []);
@@ -107,12 +140,13 @@ export default function SettingsApp() {
 
     async function loadSettings() {
       try {
-        const [settings, folderImages, savedWidgets, displays] = await Promise.all([
-          window.electronAPI?.getSettings?.() ?? Promise.resolve({}),
-          window.electronAPI?.getFolderImages?.() ?? Promise.resolve([]),
-          window.electronAPI?.getEnabledWidgets?.() ?? Promise.resolve(null),
-          window.electronAPI?.getDisplays?.() ?? Promise.resolve([]),
-        ]);
+        const [settings, folderImages, savedWidgets, displays] =
+          await Promise.all([
+            window.electronAPI?.getSettings?.() ?? Promise.resolve({}),
+            window.electronAPI?.getFolderImages?.() ?? Promise.resolve([]),
+            window.electronAPI?.getEnabledWidgets?.() ?? Promise.resolve(null),
+            window.electronAPI?.getDisplays?.() ?? Promise.resolve([]),
+          ]);
 
         if (!isMounted) {
           return;
@@ -133,13 +167,20 @@ export default function SettingsApp() {
         setGnewsApiKey(settings.gnewsApiKey ?? '');
         setAlphaVantageApiKey(settings.alphaVantageApiKey ?? '');
         setStockSymbols(settings.stockSymbols ?? 'AAPL,MSFT,GOOGL,AMZN,TSLA');
-        setCryptoCoinIds(settings.cryptoCoinIds ?? 'bitcoin,ethereum,solana,binancecoin,cardano');
+        setCryptoCoinIds(
+          settings.cryptoCoinIds ??
+            'bitcoin,ethereum,solana,binancecoin,cardano',
+        );
         setSportsLeagues(settings.sportsLeagues ?? '4387,4328');
-        setScreensaverUseAllDisplays(settings.screensaverUseAllDisplays ?? true);
+        setScreensaverUseAllDisplays(
+          settings.screensaverUseAllDisplays ?? true,
+        );
         setScreensaverDisplayIds(
           Array.isArray(settings.screensaverDisplayIds)
-            ? settings.screensaverDisplayIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
-            : []
+            ? settings.screensaverDisplayIds
+                .map((id) => Number(id))
+                .filter((id) => Number.isFinite(id))
+            : [],
         );
         setAvailableDisplays(Array.isArray(displays) ? displays : []);
 
@@ -206,7 +247,10 @@ export default function SettingsApp() {
     };
   }, [isPreviewing, previewSeed]);
 
-  const imageCountLabel = useMemo(() => `Found ${images.length} images`, [images.length]);
+  const imageCountLabel = useMemo(
+    () => `Found ${images.length} images`,
+    [images.length],
+  );
 
   const handleChooseFolder = async () => {
     setIsSelectingFolder(true);
@@ -243,14 +287,20 @@ export default function SettingsApp() {
         return;
       }
 
-      const primaryDisplay = availableDisplays.find((display) => display.primary);
-      const fallbackDisplayIds = primaryDisplay ? [Number(primaryDisplay.id)] : [];
+      const primaryDisplay = availableDisplays.find(
+        (display) => display.primary,
+      );
+      const fallbackDisplayIds = primaryDisplay
+        ? [Number(primaryDisplay.id)]
+        : [];
       const selectedDisplayIds = screensaverDisplayIds
         .map((id) => Number(id))
         .filter((id) => Number.isFinite(id));
       const displayIdsToSave = screensaverUseAllDisplays
         ? []
-        : (selectedDisplayIds.length > 0 ? selectedDisplayIds : fallbackDisplayIds);
+        : selectedDisplayIds.length > 0
+          ? selectedDisplayIds
+          : fallbackDisplayIds;
 
       await window.electronAPI.saveSettings({
         idleTimeout: Number(idleTimeout),
@@ -344,7 +394,9 @@ export default function SettingsApp() {
   const handleUseAllDisplaysToggle = (checked) => {
     setScreensaverUseAllDisplays(checked);
     if (!checked && screensaverDisplayIds.length === 0) {
-      const primaryDisplay = availableDisplays.find((display) => display.primary);
+      const primaryDisplay = availableDisplays.find(
+        (display) => display.primary,
+      );
       if (primaryDisplay) {
         setScreensaverDisplayIds([Number(primaryDisplay.id)]);
       }
@@ -362,46 +414,85 @@ export default function SettingsApp() {
 
   return (
     <div
-      className="min-h-screen bg-slate-900 text-white font-sans relative overflow-hidden select-none"
-      style={{ fontFamily: activeFontPreset.stack }}
+      className="min-h-screen text-ink relative overflow-hidden select-none"
+      style={{ fontFamily: activeFontPreset.stack, background: 'var(--ab-bg)' }}
     >
-      {/* Animated Mesh Gradient Background for Glass Effect */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/40 rounded-full blur-[120px] mix-blend-screen animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-500/40 rounded-full blur-[120px] mix-blend-screen animate-pulse" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-fuchsia-500/30 rounded-full blur-[120px] mix-blend-screen animate-pulse" style={{ animationDelay: '4s' }} />
+      {/* Swiss ground: one hard-edged accent disc cropped top-right, faint grid */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div
+          className="absolute"
+          style={{
+            top: '-40vh',
+            right: '-12vw',
+            width: '70vh',
+            height: '70vh',
+            borderRadius: '50%',
+            background: 'var(--ab-accent)',
+            opacity: 0.14,
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(90deg, var(--ab-rule) 0 1px, transparent 1px 8.333%)',
+            opacity: 0.14,
+          }}
+        />
       </div>
 
       <div className="relative z-10 flex flex-col h-screen">
-        {/* Draggable Titlebar Area */}
+        {/* Draggable Titlebar */}
         <div
-          className="h-12 w-full flex items-center justify-center shrink-0"
-          style={{ WebkitAppRegion: 'drag' }}
+          className="h-12 w-full flex items-center justify-between px-6 shrink-0 border-b"
+          style={{ WebkitAppRegion: 'drag', borderColor: 'var(--ab-rule)' }}
         >
-          <p className="text-sm font-medium text-white/50 tracking-widest">AuraBoard</p>
+          <p className="text-[11px] font-micro font-semibold uppercase tracking-[0.28em] text-accent">
+            AuraBoard
+          </p>
+          <p className="text-[11px] font-micro font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+            Configuration
+          </p>
         </div>
 
         <div className="flex-1 overflow-y-auto px-8 pb-12 pt-4 scrollbar-hide">
-          <div className="mx-auto w-full max-w-3xl space-y-8">
-
-            <div className="text-center mb-10">
-              <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">Settings</h1>
-              <p className="text-base text-white/60">Customize your screensaver experience</p>
+          <div className="mx-auto w-full max-w-3xl space-y-6">
+            <div className="mb-10 pt-6">
+              <h1
+                className="ab-display text-ink"
+                style={{ fontSize: 88, lineHeight: 0.9 }}
+              >
+                Settings
+              </h1>
+              <div className="ab-rule-strong mt-4 pt-3">
+                <p className="text-[11px] font-micro font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+                  Configure your ambient display
+                </p>
+              </div>
             </div>
 
             {/* General Section */}
-            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+            <section className="border border-surface-border bg-surface p-7">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-white">General</h2>
-                <p className="mt-1 text-sm text-white/60">Idle activation timing for the screensaver shell.</p>
+                <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
+                  General
+                </h2>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-ink-tertiary font-micro">
+                  Idle activation timing for the screensaver shell.
+                </p>
               </div>
 
               <div className="flex items-center justify-between gap-6">
                 <div className="flex-1">
-                  <label htmlFor="idle-timeout" className="block text-sm font-medium text-white mb-1">
+                  <label
+                    htmlFor="idle-timeout"
+                    className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1"
+                  >
                     Idle Timeout
                   </label>
-                  <p className="text-xs text-white/50">Minutes before screensaver activates.</p>
+                  <p className="text-xs text-ink-tertiary">
+                    Minutes before screensaver activates.
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <input
@@ -411,9 +502,11 @@ export default function SettingsApp() {
                     max="60"
                     value={idleTimeout}
                     onChange={(event) => setIdleTimeout(event.target.value)}
-                    className="w-32 accent-white h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                    className="w-32 accent-[color:var(--ab-accent)] h-1.5 bg-[color:var(--ab-rule)] appearance-none cursor-pointer"
                   />
-                  <span className="w-12 text-right text-sm font-medium text-white/90">{idleTimeout}m</span>
+                  <span className="w-12 text-right text-sm font-medium text-ink">
+                    {idleTimeout}m
+                  </span>
                 </div>
               </div>
 
@@ -426,26 +519,37 @@ export default function SettingsApp() {
                 />
 
                 {!screensaverUseAllDisplays && (
-                  <div className="rounded-2xl bg-black/20 border border-white/10 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+                  <div className="bg-ground border border-[color:var(--ab-rule)] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-ink-tertiary mb-3">
                       Target Displays
                     </p>
                     {availableDisplays.length === 0 && (
-                      <p className="text-sm text-white/60">No displays detected.</p>
+                      <p className="text-sm text-ink-secondary">
+                        No displays detected.
+                      </p>
                     )}
                     <div className="grid sm:grid-cols-2 gap-3">
                       {availableDisplays.map((display) => (
                         <label
                           key={display.id}
-                          className="flex items-center gap-3 rounded-xl bg-black/30 px-4 py-3 border border-white/10 cursor-pointer transition-all hover:bg-white/5"
+                          className="flex items-center gap-3 bg-ground px-4 py-3 border border-[color:var(--ab-rule)] cursor-pointer transition-all hover:bg-transparent"
                         >
                           <input
                             type="checkbox"
-                            checked={screensaverDisplayIds.includes(Number(display.id))}
-                            onChange={(e) => handleDisplayToggle(Number(display.id), e.target.checked)}
-                            className="w-4 h-4 accent-indigo-500 rounded"
+                            checked={screensaverDisplayIds.includes(
+                              Number(display.id),
+                            )}
+                            onChange={(e) =>
+                              handleDisplayToggle(
+                                Number(display.id),
+                                e.target.checked,
+                              )
+                            }
+                            className="w-4 h-4 accent-[color:var(--ab-accent)]"
                           />
-                          <span className="text-sm text-white/90">{display.label}</span>
+                          <span className="text-sm text-ink">
+                            {display.label}
+                          </span>
                         </label>
                       ))}
                     </div>
@@ -455,19 +559,25 @@ export default function SettingsApp() {
             </section>
 
             {/* Appearance Section */}
-            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+            <section className="border border-surface-border bg-surface p-7">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-white">Appearance</h2>
-                <p className="mt-1 text-sm text-white/60">Choose theme colors and typography for widgets.</p>
+                <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
+                  Appearance
+                </h2>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-ink-tertiary font-micro">
+                  Choose theme colors and typography for widgets.
+                </p>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">Theme</label>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-2">
+                    Theme
+                  </label>
                   <select
                     value={uiTheme}
                     onChange={(e) => setUiTheme(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow appearance-none cursor-pointer"
+                    className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] uppercase tracking-[0.08em] text-ink outline-none focus:border-accent transition-colors appearance-none cursor-pointer"
                   >
                     {Object.values(THEME_PRESETS).map((theme) => (
                       <option key={theme.id} value={theme.id}>
@@ -478,11 +588,13 @@ export default function SettingsApp() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">Font</label>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-2">
+                    Font
+                  </label>
                   <select
                     value={uiFont}
                     onChange={(e) => setUiFont(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow appearance-none cursor-pointer"
+                    className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] uppercase tracking-[0.08em] text-ink outline-none focus:border-accent transition-colors appearance-none cursor-pointer"
                   >
                     {Object.values(FONT_PRESETS).map((font) => (
                       <option key={font.id} value={font.id}>
@@ -494,30 +606,39 @@ export default function SettingsApp() {
               </div>
 
               <div
-                className="mt-6 rounded-2xl border p-5"
+                className="mt-6 border p-5"
                 style={{
                   background: activeThemePreset.widgetSurface,
                   borderColor: activeThemePreset.widgetBorder,
                 }}
               >
-                <p className="text-xs uppercase tracking-widest text-white/50 mb-2">Live Preview</p>
+                <p className="text-xs uppercase tracking-widest text-ink-tertiary mb-2">
+                  Live Preview
+                </p>
                 <p
-                  className="text-lg text-white"
+                  className="text-lg text-ink"
                   style={{ fontFamily: activeFontPreset.stack }}
                 >
                   The quick brown fox jumps over the lazy dog.
                 </p>
-                <p className="text-xs mt-2" style={{ color: activeThemePreset.accent }}>
+                <p
+                  className="text-xs mt-2"
+                  style={{ color: activeThemePreset.accent }}
+                >
                   Accent color preview
                 </p>
               </div>
             </section>
 
             {/* Widgets Section — Phase 5 */}
-            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+            <section className="border border-surface-border bg-surface p-7">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-white">Widgets</h2>
-                <p className="mt-1 text-sm text-white/60">Toggle which widgets appear on the screensaver.</p>
+                <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
+                  Widgets
+                </h2>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-ink-tertiary font-micro">
+                  Toggle which widgets appear on the screensaver.
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -534,10 +655,14 @@ export default function SettingsApp() {
             </section>
 
             {/* Layout Presets & Edit — Phase 5 */}
-            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+            <section className="border border-surface-border bg-surface p-7">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-white">Layout Presets</h2>
-                <p className="mt-1 text-sm text-white/60">Quick widget presets or customize your layout.</p>
+                <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
+                  Layout Presets
+                </h2>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-ink-tertiary font-micro">
+                  Quick widget presets or customize your layout.
+                </p>
               </div>
 
               <div className="grid sm:grid-cols-3 gap-4 mb-6">
@@ -545,10 +670,14 @@ export default function SettingsApp() {
                   <button
                     key={key}
                     onClick={() => handleApplyPreset(key)}
-                    className="rounded-2xl bg-black/20 p-4 border border-white/5 text-left transition-all hover:bg-white/10 hover:border-white/20 active:scale-95"
+                    className="border border-surface-border bg-ground p-4 text-left transition-colors hover:border-accent group"
                   >
-                    <p className="text-sm font-semibold text-white mb-1">{preset.label}</p>
-                    <p className="text-xs text-white/50">{preset.description}</p>
+                    <p className="text-[13px] font-bold uppercase tracking-[0.06em] text-ink mb-1 group-hover:text-accent">
+                      {preset.label}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-ink-tertiary font-micro">
+                      {preset.description}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -556,41 +685,51 @@ export default function SettingsApp() {
               <div className="flex gap-3">
                 <button
                   onClick={handleEditLayout}
-                  className="flex-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 px-5 py-2.5 text-sm font-semibold text-indigo-200 transition-all hover:bg-indigo-500/30"
+                  className="flex-1 border border-accent text-accent px-5 py-2.5 text-[12px] font-semibold uppercase tracking-[0.12em] font-micro transition-colors hover:bg-accent hover:text-[color:var(--ab-accent-ink)]"
                 >
-                  ✏️ Edit Layout
+                  Edit Layout
                 </button>
                 <button
                   onClick={handleResetLayout}
-                  className="flex-1 rounded-full bg-white/10 border border-white/20 px-5 py-2.5 text-sm font-semibold text-white/80 transition-all hover:bg-white/20"
+                  className="flex-1 border border-ink text-ink px-5 py-2.5 text-[12px] font-semibold uppercase tracking-[0.12em] font-micro transition-colors hover:bg-ink hover:text-ground"
                 >
-                  ↺ Reset Layout
+                  Reset Layout
                 </button>
               </div>
             </section>
 
             {/* Background Section */}
-            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+            <section className="border border-surface-border bg-surface p-7">
               <div className="flex items-start justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-white">Background</h2>
-                  <p className="mt-1 text-sm text-white/60">Configure your local photo slideshow.</p>
+                  <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
+                    Background
+                  </h2>
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-ink-tertiary font-micro">
+                    Configure your local photo slideshow.
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-6">
                 {/* Folder Selection */}
-                <div className="rounded-2xl bg-black/20 p-5 border border-white/5">
+                <div className="bg-ground p-5 border border-[color:var(--ab-surface-border)]">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 truncate pr-4">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-1">Source Folder</p>
-                      <p className="text-sm text-white/90 truncate">{slideshowFolder || 'No folder selected'}</p>
-                      <p className="text-xs text-cyan-200/80 mt-1">{imageCountLabel}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-tertiary mb-1">
+                        Source Folder
+                      </p>
+                      <p className="text-sm text-ink truncate">
+                        {slideshowFolder || 'No folder selected'}
+                      </p>
+                      <p className="text-xs text-ink-tertiary mt-1">
+                        {imageCountLabel}
+                      </p>
                     </div>
                     <button
                       onClick={handleChooseFolder}
                       disabled={isSelectingFolder}
-                      className="shrink-0 rounded-full bg-white/20 hover:bg-white/30 px-5 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
+                      className="shrink-0 border border-ink text-ink px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] font-micro transition-colors hover:bg-ink hover:text-ground disabled:opacity-50"
                     >
                       {isSelectingFolder ? 'Opening...' : 'Browse'}
                     </button>
@@ -601,8 +740,12 @@ export default function SettingsApp() {
                 <div className="grid sm:grid-cols-2 gap-6">
                   {/* Interval */}
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Interval</label>
-                    <p className="text-xs text-white/50 mb-3">Time between slides.</p>
+                    <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                      Interval
+                    </label>
+                    <p className="text-xs text-ink-tertiary mb-3">
+                      Time between slides.
+                    </p>
                     <div className="flex items-center gap-3">
                       <input
                         type="range"
@@ -610,21 +753,31 @@ export default function SettingsApp() {
                         max="600"
                         step="10"
                         value={slideshowInterval}
-                        onChange={(event) => setSlideshowInterval(Number(event.target.value))}
-                        className="flex-1 accent-white h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                        onChange={(event) =>
+                          setSlideshowInterval(Number(event.target.value))
+                        }
+                        className="flex-1 accent-[color:var(--ab-accent)] h-1.5 bg-[color:var(--ab-rule)] appearance-none cursor-pointer"
                       />
-                      <span className="w-16 text-right text-sm font-medium text-white/90">{formatInterval(Number(slideshowInterval))}</span>
+                      <span className="w-16 text-right text-sm font-medium text-ink">
+                        {formatInterval(Number(slideshowInterval))}
+                      </span>
                     </div>
                   </div>
 
                   {/* Transition Style */}
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Transition Style</label>
-                    <p className="text-xs text-white/50 mb-3">Animation between images.</p>
+                    <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                      Transition Style
+                    </label>
+                    <p className="text-xs text-ink-tertiary mb-3">
+                      Animation between images.
+                    </p>
                     <select
                       value={slideshowTransition}
-                      onChange={(event) => setSlideshowTransition(event.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow appearance-none cursor-pointer"
+                      onChange={(event) =>
+                        setSlideshowTransition(event.target.value)
+                      }
+                      className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] uppercase tracking-[0.08em] text-ink outline-none focus:border-accent transition-colors appearance-none cursor-pointer"
                     >
                       <option value="fade">Crossfade Effect</option>
                       <option value="zoom">Slow Zoom &amp; Fade</option>
@@ -633,7 +786,7 @@ export default function SettingsApp() {
                   </div>
                 </div>
 
-                <hr className="border-white/10" />
+                <hr className="border-[color:var(--ab-rule)]" />
 
                 {/* Toggles */}
                 <div className="space-y-4">
@@ -654,7 +807,7 @@ export default function SettingsApp() {
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={handlePreview}
-                    className="rounded-full border border-white/30 px-5 py-2 text-sm font-medium text-white transition-all hover:bg-white/10"
+                    className="border border-ink text-ink px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] font-micro transition-colors hover:bg-ink hover:text-ground"
                   >
                     Preview Slideshow
                   </button>
@@ -663,11 +816,15 @@ export default function SettingsApp() {
             </section>
 
             {/* Spotify Section */}
-            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+            <section className="border border-surface-border bg-surface p-7">
               <div className="flex items-start justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-white text-[#1DB954]">Spotify Integration</h2>
-                  <p className="mt-1 text-sm text-white/60">Control playback natively on your screen.</p>
+                  <h2 className="text-xl font-semibold text-ink text-[var(--ab-accent)]">
+                    Spotify Integration
+                  </h2>
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-ink-tertiary font-micro">
+                    Control playback natively on your screen.
+                  </p>
                 </div>
                 {spotifyAuthed ? (
                   <button
@@ -676,7 +833,7 @@ export default function SettingsApp() {
                       setSpotifyAuthed(false);
                       setSpotifyUsername('');
                     }}
-                    className="rounded-full border border-red-500/50 px-4 py-1.5 text-xs font-medium text-red-200 transition hover:bg-red-500/20"
+                    className="border border-[color:var(--ab-negative)] text-[color:var(--ab-negative)] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] font-micro transition-colors hover:bg-[color:var(--ab-negative)] hover:text-ground"
                   >
                     Disconnect
                   </button>
@@ -685,39 +842,60 @@ export default function SettingsApp() {
                     onClick={async () => {
                       setSpotifyConnecting(true);
                       try {
-                        const result = await window.electronAPI?.spotify?.auth();
+                        const result =
+                          await window.electronAPI?.spotify?.auth();
                         if (result?.success) {
                           setSpotifyAuthed(true);
-                          const name = await window.electronAPI?.spotify?.getUsername();
+                          const name =
+                            await window.electronAPI?.spotify?.getUsername();
                           setSpotifyUsername(name || '');
                         }
-                      } catch { /* ignore */ }
+                      } catch {
+                        /* ignore */
+                      }
                       setSpotifyConnecting(false);
                     }}
                     disabled={spotifyConnecting}
-                    className="rounded-full bg-[#1DB954] hover:bg-[#1ed760] px-5 py-2 text-sm font-medium text-black transition-colors disabled:opacity-50 shadow-[0_0_15px_rgba(29,185,84,0.3)]"
+                    className="border border-ink bg-ink text-ground px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] font-micro transition-colors hover:bg-transparent hover:text-ink disabled:opacity-50 inline-flex items-center gap-2"
                   >
-                    {spotifyConnecting ? 'Authenticating...' : 'Connect to Spotify'}
+                    {spotifyConnecting
+                      ? 'Authenticating...'
+                      : 'Connect to Spotify'}
                   </button>
                 )}
               </div>
 
               {spotifyAuthed && (
                 <div className="space-y-6">
-                  <div className="rounded-2xl bg-black/20 p-4 border border-white/5 flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-full bg-[#1DB954]/20 flex items-center justify-center shrink-0">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" /></svg>
+                  <div className="bg-ground p-4 border border-[color:var(--ab-surface-border)] flex items-center gap-4">
+                    <div className="h-10 w-10 bg-[color:var(--ab-accent)]/15 flex items-center justify-center shrink-0">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="var(--ab-accent)"
+                      >
+                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+                      </svg>
                     </div>
                     <div>
-                      <p className="text-xs text-white/50 mb-0.5">Connected Account</p>
-                      <p className="text-sm font-medium text-white">{spotifyUsername || 'Spotify User'}</p>
+                      <p className="text-xs text-ink-tertiary mb-0.5">
+                        Connected Account
+                      </p>
+                      <p className="text-sm font-medium text-ink">
+                        {spotifyUsername || 'Spotify User'}
+                      </p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-6">
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-white mb-1">Polling Interval</label>
-                      <p className="text-xs text-white/50">Refresh rate for current track info.</p>
+                      <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                        Polling Interval
+                      </label>
+                      <p className="text-xs text-ink-tertiary">
+                        Refresh rate for current track info.
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <input
@@ -725,10 +903,14 @@ export default function SettingsApp() {
                         min="1"
                         max="10"
                         value={spotifyPollInterval}
-                        onChange={(e) => setSpotifyPollInterval(Number(e.target.value))}
-                        className="w-32 accent-white h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                        onChange={(e) =>
+                          setSpotifyPollInterval(Number(e.target.value))
+                        }
+                        className="w-32 accent-[color:var(--ab-accent)] h-1.5 bg-[color:var(--ab-rule)] appearance-none cursor-pointer"
                       />
-                      <span className="w-12 text-right text-sm font-medium text-white/90">{spotifyPollInterval}s</span>
+                      <span className="w-12 text-right text-sm font-medium text-ink">
+                        {spotifyPollInterval}s
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -736,85 +918,114 @@ export default function SettingsApp() {
             </section>
 
             {/* API Keys & Data Section — Phase 5 */}
-            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+            <section className="border border-surface-border bg-surface p-7">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-white">API Keys &amp; Data</h2>
-                <p className="mt-1 text-sm text-white/60">Configure data sources for your widgets.</p>
+                <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
+                  API Keys &amp; Data
+                </h2>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-ink-tertiary font-micro">
+                  Configure data sources for your widgets.
+                </p>
               </div>
 
               <div className="space-y-6">
                 {/* GNews API Key */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-1">GNews API Key</label>
-                  <p className="text-xs text-white/50 mb-2">For the News widget. Falls back to BBC RSS if empty.</p>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                    GNews API Key
+                  </label>
+                  <p className="text-xs text-ink-tertiary mb-2">
+                    For the News widget. Falls back to BBC RSS if empty.
+                  </p>
                   <input
                     type="text"
                     value={gnewsApiKey}
                     onChange={(e) => setGnewsApiKey(e.target.value)}
                     placeholder="Enter your GNews API key"
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow placeholder:text-white/25"
+                    className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors placeholder:text-ink-tertiary"
                   />
                 </div>
 
                 {/* Alpha Vantage API Key */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-1">Alpha Vantage API Key</label>
-                  <p className="text-xs text-white/50 mb-2">For the Stocks widget. Falls back to Yahoo Finance if empty.</p>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                    Alpha Vantage API Key
+                  </label>
+                  <p className="text-xs text-ink-tertiary mb-2">
+                    For the Stocks widget. Falls back to Yahoo Finance if empty.
+                  </p>
                   <input
                     type="text"
                     value={alphaVantageApiKey}
                     onChange={(e) => setAlphaVantageApiKey(e.target.value)}
                     placeholder="Enter your Alpha Vantage API key"
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow placeholder:text-white/25"
+                    className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors placeholder:text-ink-tertiary"
                   />
                 </div>
 
-                <hr className="border-white/10" />
+                <hr className="border-[color:var(--ab-rule)]" />
 
                 {/* Stock Symbols */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-1">Stock Symbols</label>
-                  <p className="text-xs text-white/50 mb-2">Comma-separated. Max 5 symbols.</p>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                    Stock Symbols
+                  </label>
+                  <p className="text-xs text-ink-tertiary mb-2">
+                    Comma-separated. Max 5 symbols.
+                  </p>
                   <input
                     type="text"
                     value={stockSymbols}
                     onChange={(e) => setStockSymbols(e.target.value)}
                     placeholder="AAPL,MSFT,GOOGL,AMZN,TSLA"
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow placeholder:text-white/25 font-mono"
+                    className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors placeholder:text-ink-tertiary font-micro tracking-[0.06em]"
                   />
                 </div>
 
                 {/* Crypto Coin IDs */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-1">Crypto Coin IDs</label>
-                  <p className="text-xs text-white/50 mb-2">CoinGecko coin IDs, comma-separated.</p>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                    Crypto Coin IDs
+                  </label>
+                  <p className="text-xs text-ink-tertiary mb-2">
+                    CoinGecko coin IDs, comma-separated.
+                  </p>
                   <input
                     type="text"
                     value={cryptoCoinIds}
                     onChange={(e) => setCryptoCoinIds(e.target.value)}
                     placeholder="bitcoin,ethereum,solana,binancecoin,cardano"
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow placeholder:text-white/25 font-mono"
+                    className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors placeholder:text-ink-tertiary font-micro tracking-[0.06em]"
                   />
                 </div>
 
-                <hr className="border-white/10" />
+                <hr className="border-[color:var(--ab-rule)]" />
 
                 {/* Sports Leagues */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">Sports Leagues</label>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-2">
+                    Sports Leagues
+                  </label>
                   <div className="grid grid-cols-2 gap-3">
                     {LEAGUE_OPTIONS.map((league) => (
                       <label
                         key={league.id}
-                        className="flex items-center gap-3 rounded-xl bg-black/20 px-4 py-3 border border-white/5 cursor-pointer transition-all hover:bg-white/5"
+                        className="flex items-center gap-3 bg-ground px-4 py-3 border border-[color:var(--ab-surface-border)] cursor-pointer transition-all hover:bg-transparent"
                       >
                         <input
                           type="checkbox"
                           checked={sportsLeagues.split(',').includes(league.id)}
-                          onChange={(e) => handleSportsLeagueToggle(league.id, e.target.checked)}
-                          className="w-4 h-4 accent-indigo-500 rounded"
+                          onChange={(e) =>
+                            handleSportsLeagueToggle(
+                              league.id,
+                              e.target.checked,
+                            )
+                          }
+                          className="w-4 h-4 accent-[color:var(--ab-accent)]"
                         />
-                        <span className="text-sm font-medium text-white">{league.name}</span>
+                        <span className="text-sm font-medium text-ink">
+                          {league.name}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -824,7 +1035,9 @@ export default function SettingsApp() {
 
             {/* Bottom Actions */}
             <div className="flex items-center justify-between p-2">
-              <p className={`text-sm font-medium transition-opacity duration-300 ${saveMessage ? 'opacity-100' : 'opacity-0'} ${saveMessage.includes('saved') || saveMessage.includes('selected') || saveMessage.includes('reset') ? 'text-green-400' : 'text-amber-400'}`}>
+              <p
+                className={`text-sm font-medium transition-opacity duration-300 ${saveMessage ? 'opacity-100' : 'opacity-0'} ${saveMessage.includes('saved') || saveMessage.includes('selected') || saveMessage.includes('reset') ? 'text-[color:var(--ab-positive)]' : 'text-[color:var(--ab-warning)]'}`}
+              >
                 {saveMessage || ' '}
               </p>
               <div className="flex items-center gap-4">
@@ -833,27 +1046,26 @@ export default function SettingsApp() {
                     handleSave();
                     window.electronAPI?.startScreensaver?.();
                   }}
-                  className="rounded-full bg-white/10 border border-white/20 text-white px-6 py-3 text-sm font-semibold transition-transform hover:scale-105 active:scale-95 shadow-lg"
+                  className="border border-ink text-ink px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.14em] font-micro transition-colors hover:bg-ink hover:text-ground"
                 >
                   Start Screensaver
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="rounded-full bg-white text-black px-8 py-3 text-sm font-semibold transition-transform hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] disabled:opacity-50 disabled:hover:scale-100"
+                  className="bg-accent text-[color:var(--ab-accent-ink)] px-8 py-3 text-[12px] font-semibold uppercase tracking-[0.14em] font-micro transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   {isSaving ? 'Saving...' : 'Save Configuration'}
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       </div>
 
       {isPreviewing && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-12">
-          <div className="relative w-full h-full max-w-6xl overflow-hidden rounded-[2.5rem] border border-white/20 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-[color:var(--ab-bg)]/90 backdrop-blur-md flex items-center justify-center p-12">
+          <div className="relative w-full h-full max-w-6xl overflow-hidden border border-[color:var(--ab-rule)]">
             <SlideshowBackground
               key={previewSeed}
               images={images}
@@ -861,11 +1073,17 @@ export default function SettingsApp() {
               transition={slideshowTransition}
               shuffle={slideshowShuffle}
             />
-            <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 z-10 bg-gradient-to-t from-[color:var(--ab-bg)] via-transparent to-transparent pointer-events-none" />
             <div className="absolute bottom-8 left-8 z-20">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/50">Preview Mode</p>
-              <p className="mt-1 text-3xl font-light text-white">
-                {slideshowTransition === 'fade' ? 'Crossfade' : slideshowTransition === 'zoom' ? 'Zoom' : 'Slide'}
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-ink-tertiary">
+                Preview Mode
+              </p>
+              <p className="mt-1 text-3xl font-light text-ink">
+                {slideshowTransition === 'fade'
+                  ? 'Crossfade'
+                  : slideshowTransition === 'zoom'
+                    ? 'Zoom'
+                    : 'Slide'}
               </p>
             </div>
           </div>

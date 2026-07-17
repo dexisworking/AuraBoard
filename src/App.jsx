@@ -21,6 +21,8 @@ export default function App() {
   const [enabledWidgets, setEnabledWidgets] = useState([
     'clock', 'date', 'greeting', 'weather', 'spotify',
   ]);
+  const [widgetConfig, setWidgetConfig] = useState({});
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
     let cleanup = null;
@@ -30,8 +32,14 @@ export default function App() {
         setIsActive(true);
       });
 
-      // Also set active immediately in case we missed the event
-      setIsActive(true);
+      // Also set active immediately in case we missed the event (deferred out
+      // of the effect body so it doesn't trigger a synchronous cascade).
+      const raf = window.requestAnimationFrame(() => setIsActive(true));
+      const prevCleanup = cleanup;
+      cleanup = () => {
+        window.cancelAnimationFrame(raf);
+        if (prevCleanup) prevCleanup();
+      };
     } else {
       const timer = window.setTimeout(() => setIsActive(true), 300);
       return () => window.clearTimeout(timer);
@@ -48,10 +56,11 @@ export default function App() {
 
     async function loadSlideshow() {
       try {
-        const [settings, folderImages, savedWidgets] = await Promise.all([
+        const [settings, folderImages, savedWidgets, savedConfig] = await Promise.all([
           window.electronAPI?.getSettings?.() ?? Promise.resolve({}),
           window.electronAPI?.getFolderImages?.() ?? Promise.resolve([]),
           window.electronAPI?.getEnabledWidgets?.() ?? Promise.resolve(null),
+          window.electronAPI?.getWidgetConfig?.() ?? Promise.resolve({}),
         ]);
 
         if (!isMounted) return;
@@ -63,6 +72,8 @@ export default function App() {
         setUseSpotifyArtBackground(Boolean(settings.useSpotifyArtBackground));
         setUiTheme(settings.uiTheme ?? 'aurora');
         setUiFont(settings.uiFont ?? 'outfit');
+        setUserName(settings.userName ?? '');
+        setWidgetConfig(savedConfig && typeof savedConfig === 'object' ? savedConfig : {});
 
         if (Array.isArray(savedWidgets) && savedWidgets.length > 0) {
           setEnabledWidgets(savedWidgets);
@@ -208,6 +219,8 @@ export default function App() {
         <WidgetGrid
           editMode={editMode}
           enabledWidgets={enabledWidgets}
+          widgetConfig={widgetConfig}
+          userName={userName}
           onRemoveWidget={handleRemoveWidget}
           spotifyProps={{ onTrackUpdate: setSpotifyTrack }}
           reloadTrigger={isActive ? 1 : 0}

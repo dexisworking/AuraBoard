@@ -39,6 +39,10 @@ async function initStore() {
         // Phase 5 — widget system
         widgetLayout: null,
         enabledWidgets: ['clock', 'date', 'greeting', 'weather', 'spotify'],
+        // Per-widget config: variant selection + instance settings, keyed by
+        // widget id. Replaces the old hardcoded widget props (incl. 'Dex').
+        widgetConfig: {},
+        userName: '',
         gnewsApiKey: '',
         alphaVantageApiKey: '',
         stockSymbols: 'AAPL,MSFT,GOOGL,AMZN,TSLA',
@@ -256,15 +260,16 @@ function createSettingsWindow() {
     height: 860,
     resizable: true,
     frame: false,
+    icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'),
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#0f172a',
+      color: '#0A0A0A',
       symbolColor: '#ffffff',
       height: 48,
     },
     alwaysOnTop: false,
     title: 'AuraBoard Settings',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0A0A0A',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
@@ -303,8 +308,9 @@ function createLayoutEditorWindow() {
     width,
     height,
     title: 'AuraBoard Layout Editor',
+    icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'),
     titleBarStyle: 'hidden',
-    backgroundColor: '#02050a',
+    backgroundColor: '#0A0A0A',
     show: false,
     frame: false,
     fullscreen: true,
@@ -344,7 +350,7 @@ function notifyDisplaysChanged() {
 
 // ── System Tray ───────────────────────────────────────────────────────
 function createTray() {
-  const iconPath = path.join(__dirname, '..', '..', 'assets', 'tray-icon.png');
+  const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
   let trayIcon;
 
   try {
@@ -434,6 +440,7 @@ function setupIPC() {
       spotifyPollInterval: store ? store.get('spotifyPollInterval', 3) : 3,
       uiTheme: store ? store.get('uiTheme', 'aurora') : 'aurora',
       uiFont: store ? store.get('uiFont', 'outfit') : 'outfit',
+      userName: store ? store.get('userName', '') : '',
       screensaverUseAllDisplays: store ? store.get('screensaverUseAllDisplays', true) : true,
       screensaverDisplayIds: store ? store.get('screensaverDisplayIds', []) : [],
       useSpotifyArtBackground: store ? store.get('useSpotifyArtBackground', false) : false,
@@ -477,6 +484,9 @@ function setupIPC() {
     }
     if (data.uiFont !== undefined) {
       store.set('uiFont', String(data.uiFont));
+    }
+    if (data.userName !== undefined) {
+      store.set('userName', String(data.userName).slice(0, 40));
     }
     if (data.screensaverUseAllDisplays !== undefined) {
       store.set('screensaverUseAllDisplays', Boolean(data.screensaverUseAllDisplays));
@@ -656,6 +666,18 @@ function setupIPC() {
   ipcMain.handle('reset-widget-layout', async () => {
     if (store) {
       store.set('widgetLayout', null);
+    }
+    return { success: true };
+  });
+
+  // Per-widget config (variant + instance settings), keyed by widget id.
+  ipcMain.handle('get-widget-config', async () => {
+    return store ? store.get('widgetConfig', {}) : {};
+  });
+
+  ipcMain.handle('save-widget-config', async (_event, config) => {
+    if (store && config && typeof config === 'object') {
+      store.set('widgetConfig', config);
     }
     return { success: true };
   });

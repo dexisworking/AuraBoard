@@ -121,6 +121,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** Reset widget layout to default. */
   resetWidgetLayout: () => ipcRenderer.invoke('reset-widget-layout'),
 
+  /** Get per-widget config (variant + instance settings), keyed by widget id. */
+  getWidgetConfig: () => ipcRenderer.invoke('get-widget-config'),
+
+  /** Save per-widget config map. */
+  saveWidgetConfig: (config) => ipcRenderer.invoke('save-widget-config', config),
+
   /** Parse an RSS feed URL in the main process and return items. */
   fetchRss: (url) => ipcRenderer.invoke('fetch-rss', url),
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import WidgetGrid from './layout/WidgetGrid';
-import { getAllWidgets } from './widgets/registry';
+import { getAllWidgets, getDefaultVariant } from './widgets/registry';
 import { getFontPreset, getThemePreset } from './theme/presets';
 import { applyTheme } from './theme/applyTheme';
 
@@ -13,6 +13,8 @@ export default function LayoutEditorApp() {
   ]);
   const [uiTheme, setUiTheme] = useState('aurora');
   const [uiFont, setUiFont] = useState('outfit');
+  const [userName, setUserName] = useState('');
+  const [widgetConfig, setWidgetConfig] = useState({});
   const [isClosing, setIsClosing] = useState(false);
   const [showWidgetManager, setShowWidgetManager] = useState(false);
   const latestDraftLayoutRef = useRef(null);
@@ -24,9 +26,10 @@ export default function LayoutEditorApp() {
     let isMounted = true;
     async function loadSettings() {
       try {
-        const [savedWidgets, settings] = await Promise.all([
+        const [savedWidgets, settings, savedConfig] = await Promise.all([
           window.electronAPI?.getEnabledWidgets?.(),
           window.electronAPI?.getSettings?.(),
+          window.electronAPI?.getWidgetConfig?.() ?? Promise.resolve({}),
         ]);
         if (!isMounted) return;
         if (Array.isArray(savedWidgets) && savedWidgets.length > 0) {
@@ -34,12 +37,23 @@ export default function LayoutEditorApp() {
         }
         setUiTheme(settings?.uiTheme ?? 'aurora');
         setUiFont(settings?.uiFont ?? 'outfit');
+        setUserName(settings?.userName ?? '');
+        setWidgetConfig(savedConfig && typeof savedConfig === 'object' ? savedConfig : {});
       } catch (error) {
         console.error('Failed to load enabled widgets in layout editor:', error);
       }
     }
     loadSettings();
     return () => { isMounted = false; };
+  }, []);
+
+  // Change a widget's variant and persist immediately.
+  const handleSetVariant = useCallback((widgetId, variantId) => {
+    setWidgetConfig((prev) => {
+      const next = { ...prev, [widgetId]: { ...(prev[widgetId] || {}), variant: variantId } };
+      void window.electronAPI?.saveWidgetConfig?.(next);
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -145,42 +159,48 @@ export default function LayoutEditorApp() {
       }}
     >
       
-      {/* ── Background Mesh (same as Settings) ── */}
+      {/* ── Swiss ground ── */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/20 rounded-full blur-[120px] mix-blend-screen" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-500/20 rounded-full blur-[120px] mix-blend-screen" />
+        <div
+          className="absolute"
+          style={{
+            top: '-45vh', right: '-12vw', width: '75vh', height: '75vh',
+            borderRadius: '50%', background: 'var(--ab-accent)', opacity: 0.10,
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(90deg, var(--ab-rule) 0 1px, transparent 1px 8.333%)',
+            opacity: 0.12,
+          }}
+        />
       </div>
 
       {/* ── Top Bar ── */}
-      <div className="titlebar absolute top-0 left-0 w-full h-16 pointer-events-none z-50 flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-300">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-              <polyline points="22,6 12,13 2,6"></polyline>
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-white font-semibold tracking-wide text-sm">Layout Editor</h1>
-            <p className="text-white/50 text-[10px] uppercase tracking-widest font-bold">Drag to move · Resize from borders</p>
-          </div>
+      <div
+        className="titlebar absolute top-0 left-0 w-full h-16 pointer-events-none z-50 flex items-center justify-between px-6 border-b"
+        style={{ borderColor: 'var(--ab-rule)' }}
+      >
+        <div>
+          <h1 className="ab-display text-ink" style={{ fontSize: 26, lineHeight: 1 }}>Layout Editor</h1>
+          <p className="text-ink-tertiary text-[10px] uppercase tracking-[0.22em] font-micro font-semibold mt-0.5">Drag to move · Resize from any edge</p>
         </div>
 
         <div className="no-drag pointer-events-auto flex items-center gap-3">
           <button
             onClick={() => setShowWidgetManager((prev) => !prev)}
             disabled={isClosing}
-            className="rounded-full bg-indigo-500/20 border border-indigo-300/30 text-indigo-100 px-4 py-2 text-xs font-semibold tracking-wide transition-colors hover:bg-indigo-500/30 disabled:opacity-50"
+            className="border border-accent text-accent px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] font-micro transition-colors hover:bg-accent hover:text-[color:var(--ab-accent-ink)] disabled:opacity-50"
           >
-            Widgets ({enabledWidgets.length}/{allWidgets.length})
+            Widgets {enabledWidgets.length}/{allWidgets.length}
           </button>
-          {/* Done / Close Button */}
           <button
             onClick={handleClose}
             disabled={isClosing}
-            className="rounded-full bg-white text-black px-6 py-2 text-sm font-semibold transition-transform hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-60"
+            className="bg-accent text-[color:var(--ab-accent-ink)] px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] font-micro transition-opacity hover:opacity-90 disabled:opacity-60"
           >
-            {isClosing ? 'Saving...' : 'Done'}
+            {isClosing ? 'Saving…' : 'Done'}
           </button>
         </div>
       </div>
@@ -191,14 +211,19 @@ export default function LayoutEditorApp() {
         <WidgetGrid
           editMode={true}
           enabledWidgets={enabledWidgets}
+          widgetConfig={widgetConfig}
+          userName={userName}
           onRemoveWidget={handleRemoveWidget}
           onLayoutDraftChange={handleLayoutDraftChange}
         />
       </div>
 
       {showWidgetManager && (
-        <div className="absolute top-20 right-6 z-[70] w-80 max-h-[70vh] overflow-y-auto rounded-2xl border border-white/20 bg-black/60 backdrop-blur-xl p-4 shadow-2xl">
-          <p className="text-xs uppercase tracking-widest text-white/50 mb-3 font-semibold">
+        <div
+          className="absolute top-20 right-6 z-[70] w-80 max-h-[70vh] overflow-y-auto border p-4 scrollbar-hide"
+          style={{ background: 'var(--ab-surface)', borderColor: 'var(--ab-rule-strong)' }}
+        >
+          <p className="text-[10px] uppercase tracking-[0.22em] text-accent mb-3 font-micro font-semibold">
             Add / Remove Widgets
           </p>
           <div className="space-y-2">
@@ -207,22 +232,67 @@ export default function LayoutEditorApp() {
               return (
                 <label
                   key={widget.id}
-                  className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 cursor-pointer hover:bg-white/[0.06] transition-colors"
+                  className="flex items-start gap-3 border p-3 cursor-pointer transition-colors"
+                  style={{
+                    background: 'var(--ab-bg)',
+                    borderColor: checked ? 'var(--ab-accent)' : 'var(--ab-surface-border)',
+                  }}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={(e) => handleToggleWidget(widget.id, e.target.checked)}
-                    className="mt-1 w-4 h-4 accent-indigo-500"
+                    className="mt-0.5 w-4 h-4 accent-[color:var(--ab-accent)]"
                   />
                   <span className="min-w-0">
-                    <span className="block text-sm text-white font-medium">{widget.name}</span>
-                    <span className="block text-xs text-white/55">{widget.description}</span>
+                    <span className="block text-[12px] uppercase tracking-[0.06em] text-ink font-semibold">{widget.name}</span>
+                    <span className="block text-[10px] uppercase tracking-[0.08em] text-ink-tertiary font-micro mt-0.5">{widget.description}</span>
                   </span>
                 </label>
               );
             })}
           </div>
+
+          {/* ── Variant picker: distinct visual style per enabled widget ── */}
+          {enabledWidgets.some((id) => (allWidgets.find((w) => w.id === id)?.variants?.length > 1)) && (
+            <div className="mt-5 pt-4 border-t" style={{ borderColor: 'var(--ab-rule)' }}>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-accent mb-3 font-micro font-semibold">
+                Widget Styles
+              </p>
+              <div className="space-y-4">
+                {allWidgets
+                  .filter((w) => enabledWidgets.includes(w.id) && (w.variants?.length > 1))
+                  .map((widget) => {
+                    const activeVariant = widgetConfig[widget.id]?.variant || getDefaultVariant(widget.id);
+                    return (
+                      <div key={widget.id}>
+                        <p className="text-[10px] uppercase tracking-[0.12em] text-ink-tertiary font-micro mb-1.5">{widget.name}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {widget.variants.map((v) => {
+                            const active = v.id === activeVariant;
+                            return (
+                              <button
+                                key={v.id}
+                                onClick={() => handleSetVariant(widget.id, v.id)}
+                                title={v.description}
+                                className="border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] font-micro transition-colors"
+                                style={{
+                                  borderColor: active ? 'var(--ab-accent)' : 'var(--ab-surface-border)',
+                                  background: active ? 'var(--ab-accent)' : 'transparent',
+                                  color: active ? 'var(--ab-accent-ink)' : 'var(--ab-ink-secondary)',
+                                }}
+                              >
+                                {v.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

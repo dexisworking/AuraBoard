@@ -7,7 +7,55 @@
 }
 
 .widget-grid.is-editing .react-grid-item:hover > div {
-  box-shadow: inset 0 0 0 1px var(--ab-edit-border, rgba(129, 140, 248, 0.6));
+  box-shadow: inset 0 0 0 1px var(--ab-edit-border, currentColor);
+}
+
+/* ── Smooth grid motion ──────────────────────────────────────────────────
+   The grid item owns `transform` for positioning, so entrance motion is applied
+   to the inner cell instead (never the item) to avoid fighting the layout. */
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+  transition-duration: 260ms;
+  transition-timing-function: var(--ab-ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.react-grid-item.resizing,
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 100;
+}
+
+/* Swiss drag placeholder — a hard accent block, not a rounded tint */
+.widget-grid .react-grid-placeholder {
+  background: var(--ab-accent) !important;
+  opacity: 0.14 !important;
+  border-radius: 0 !important;
+  box-shadow: inset 0 0 0 1px var(--ab-accent);
+  transition-duration: 120ms;
+}
+
+/* Display-mode entrance: staggered fade-and-rise on the inner cell */
+@keyframes ab-widget-enter {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.widget-grid:not(.is-editing) .react-grid-item > div {
+  animation: ab-widget-enter 720ms var(--ab-ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.widget-grid:not(.is-editing) .react-grid-item:nth-child(1) > div { animation-delay: 40ms; }
+.widget-grid:not(.is-editing) .react-grid-item:nth-child(2) > div { animation-delay: 110ms; }
+.widget-grid:not(.is-editing) .react-grid-item:nth-child(3) > div { animation-delay: 180ms; }
+.widget-grid:not(.is-editing) .react-grid-item:nth-child(4) > div { animation-delay: 250ms; }
+.widget-grid:not(.is-editing) .react-grid-item:nth-child(5) > div { animation-delay: 320ms; }
+.widget-grid:not(.is-editing) .react-grid-item:nth-child(6) > div { animation-delay: 390ms; }
+.widget-grid:not(.is-editing) .react-grid-item:nth-child(7) > div { animation-delay: 460ms; }
+.widget-grid:not(.is-editing) .react-grid-item:nth-child(n+8) > div { animation-delay: 530ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-grid:not(.is-editing) .react-grid-item > div { animation: none; }
+  .react-grid-item.cssTransforms { transition-duration: 0ms; }
 }
 
 .widget-grid.is-editing .react-resizable-handle {

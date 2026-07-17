@@ -30,6 +30,27 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
+
+  /* Smooth theme switches: colour-bearing surfaces ease between palettes
+     instead of snapping (visible in Settings/editor previews). */
+  .ab-widget-root,
+  .ab-widget-title,
+  .ab-cell,
+  .ab-display,
+  .ab-numeric,
+  .ab-micro {
+    transition: color 320ms var(--ab-ease-out, ease), background-color 320ms var(--ab-ease-out, ease), border-color 320ms var(--ab-ease-out, ease);
+  }
+
+  /* Respect the OS reduced-motion setting everywhere. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer utilities {
