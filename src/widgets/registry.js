@@ -122,16 +122,22 @@ export function getWidget(id) {
 export function getDefaultLayout(enabledWidgets) {
   const enabled = new Set(enabledWidgets || Object.keys(WIDGETS));
 
+  // Full-bleed editorial composition on the 12-column grid. The default set
+  // (clock, date, greeting, weather, spotify) tiles rows 0–8 with no gaps:
+  // the clock is the hero top-left, date+weather stack in the right column,
+  // greeting and spotify form the lower band. The remaining widgets extend the
+  // poster downward when enabled. rowHeight is computed to fill the viewport,
+  // so these row spans map to real screen proportions.
   const allPositions = [
-    { i: 'greeting', x: 0, y: 0, w: 3, h: 2 },
-    { i: 'date',     x: 3, y: 0, w: 2, h: 1 },
-    { i: 'clock',    x: 10, y: 0, w: 2, h: 2 },
-    { i: 'weather',  x: 0, y: 2, w: 2, h: 2 },
-    { i: 'spotify',  x: 2, y: 2, w: 2, h: 2 },
-    { i: 'crypto',   x: 4, y: 2, w: 2, h: 2 },
-    { i: 'stocks',   x: 6, y: 2, w: 2, h: 2 },
-    { i: 'news',     x: 0, y: 5, w: 3, h: 2 },
-    { i: 'sports',   x: 3, y: 5, w: 2, h: 2 },
+    { i: 'clock',    x: 0, y: 0, w: 8, h: 5 },
+    { i: 'date',     x: 8, y: 0, w: 4, h: 2 },
+    { i: 'weather',  x: 8, y: 2, w: 4, h: 3 },
+    { i: 'greeting', x: 0, y: 5, w: 6, h: 3 },
+    { i: 'spotify',  x: 6, y: 5, w: 6, h: 3 },
+    { i: 'news',     x: 0, y: 8, w: 7, h: 2 },
+    { i: 'sports',   x: 7, y: 8, w: 5, h: 2 },
+    { i: 'crypto',   x: 0, y: 10, w: 6, h: 2 },
+    { i: 'stocks',   x: 6, y: 10, w: 6, h: 2 },
   ];
 
   return allPositions

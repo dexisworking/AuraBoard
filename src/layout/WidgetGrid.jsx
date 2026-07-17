@@ -173,14 +173,15 @@ function EditBanner() {
 }
 
 /* ── Full Widget Scaling ── */
-function ScaleWrapper({ children, defaultGridW, defaultGridH, colWidth }) {
+function ScaleWrapper({ children, defaultGridW, defaultGridH, colWidth, rowHeight = ROW_HEIGHT }) {
   const ref = useRef(null);
   const [scale, setScale] = useState(1);
   const [mounted, setMounted] = useState(false);
 
   const safeColWidth = colWidth > 0 ? colWidth : 1;
+  const safeRowHeight = rowHeight > 0 ? rowHeight : ROW_HEIGHT;
   const baseW = defaultGridW * safeColWidth + (defaultGridW - 1) * MARGIN[0];
-  const baseH = defaultGridH * ROW_HEIGHT + (defaultGridH - 1) * MARGIN[1];
+  const baseH = defaultGridH * safeRowHeight + (defaultGridH - 1) * MARGIN[1];
 
   useEffect(() => {
     setMounted(true);
@@ -242,12 +243,28 @@ export default function WidgetGrid({
 }) {
   const [layout, setLayout] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [containerHeight, setContainerHeight] = useState(0);
   const { width, mounted: widthReady, containerRef } = useContainerWidth();
   const colWidth = getGridColumnWidth(width);
   const layoutRef = useRef(layout);
   const persistedSignatureRef = useRef('');
   const pendingPersistLayoutRef = useRef(null);
   const saveInFlightRef = useRef(false);
+
+  /* ── measure container height so rowHeight can fill the viewport ──
+     The board is full-screen; without this the grid only occupies
+     rows*ROW_HEIGHT px and clusters at the top with a large void below. */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect?.height ?? 0;
+      if (h > 0) setContainerHeight(h);
+    });
+    ro.observe(el);
+    if (el.clientHeight > 0) setContainerHeight(el.clientHeight);
+    return () => ro.disconnect();
+  }, [containerRef, widthReady, mounted]);
 
   const emitDraftLayout = useCallback((nextLayout) => {
     if (!editMode || !onLayoutDraftChange || !Array.isArray(nextLayout)) return;
@@ -426,6 +443,20 @@ export default function WidgetGrid({
     }))
     .sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
 
+  /* ── dynamic rowHeight: scale rows so the layout fills the viewport height ──
+     rowHeight = usableHeight / maxRow, where maxRow is the tallest row the
+     current layout reaches. This keeps the board full-bleed regardless of how
+     many rows a layout uses, and keeps ScaleWrapper's base cell aspect close to
+     the real cell (less letterboxing). Falls back to ROW_HEIGHT before measure. */
+  const maxRow = visibleLayout.reduce(
+    (m, it) => Math.max(m, (Number(it.y) || 0) + (Number(it.h) || 1)),
+    0,
+  ) || 1;
+  const usableHeight = containerHeight - MARGIN[1] * (maxRow + 1);
+  const rowHeight = (containerHeight > 0 && usableHeight > 0)
+    ? Math.max(28, usableHeight / maxRow)
+    : ROW_HEIGHT;
+
   /* ── render each widget inside the grid ── */
   const widgetItems = visibleLayout.map((item) => {
     const meta = getWidget(item.i);
@@ -468,6 +499,7 @@ export default function WidgetGrid({
               defaultGridW={meta.defaultSize.w}
               defaultGridH={meta.defaultSize.h}
               colWidth={colWidth}
+              rowHeight={rowHeight}
             >
               <Component {...widgetProps} />
             </ScaleWrapper>
@@ -484,7 +516,7 @@ export default function WidgetGrid({
         className={`widget-grid ${editMode ? 'is-editing' : ''}`}
         layout={visibleLayout}
         cols={COLS}
-        rowHeight={ROW_HEIGHT}
+        rowHeight={rowHeight}
         width={width}
         margin={MARGIN}
         containerPadding={MARGIN}
