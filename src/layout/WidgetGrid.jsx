@@ -230,9 +230,20 @@ export default function WidgetGrid({
       const normalizedSaved = normalizeLayout(saved);
       if (normalizedSaved.length > 0 && isValidLayout(normalizedSaved)) {
         const loaded = cloneLayout(normalizedSaved);
-        setLayout(loaded);
-        persistedSignatureRef.current = getLayoutSignature(loaded);
-        emitDraftLayout(loaded);
+        // Align loaded layout with currently enabled widgets
+        const enabledSet = new Set(enabledWidgets);
+        let aligned = loaded.filter((l) => enabledSet.has(l.i));
+        const currentIds = new Set(aligned.map((l) => l.i));
+        const defaultPositions = getDefaultLayout(enabledWidgets);
+        for (const def of defaultPositions) {
+          if (!currentIds.has(def.i) && enabledSet.has(def.i)) {
+            aligned.push(def);
+          }
+        }
+        const finalLayout = normalizeLayout(aligned);
+        setLayout(finalLayout);
+        persistedSignatureRef.current = getLayoutSignature(finalLayout);
+        emitDraftLayout(finalLayout);
       } else {
         const fallback = normalizeLayout(getDefaultLayout(enabledWidgets));
         setLayout(fallback);
