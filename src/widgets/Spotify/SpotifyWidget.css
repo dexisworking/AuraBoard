@@ -1,26 +1,27 @@
 /**
- * SpotifyWidget — Swiss/Brutalist. No glass, no card: monochrome album art,
- * condensed track title, hairline progress rail with a signal-colour fill,
- * square mechanical controls.
+ * SpotifyWidget — Swiss/Brutalist. No glass, no card. Monochrome album art,
+ * condensed title, hairline progress rail, square controls. Sizes in em off a
+ * container-responsive root, so it fits any cell.
  */
 
 .spotify-widget {
   font-family: var(--ab-font-ui);
   width: 100%;
   height: 100%;
-  padding: 14px 16px;
+  padding: 5cqmin 6cqmin;
   box-sizing: border-box;
   color: var(--ab-ink);
   user-select: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  font-size: clamp(8px, 3.4cqmin, 15px);
 }
 
 .spotify-now-playing {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.7em;
   flex: 1;
   justify-content: center;
   min-height: 0;
@@ -33,18 +34,19 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 12px;
+  gap: 0.9em;
 }
 
 .spotify-empty-icon {
   color: var(--ab-ink-tertiary);
+  font-size: 1.4em;
 }
 
 .spotify-empty-text {
   font-family: var(--ab-font-micro);
-  font-size: var(--ab-text-micro);
+  font-size: 0.85em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   line-height: 1.7;
   color: var(--ab-ink-secondary);
@@ -54,19 +56,19 @@
   appearance: none;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.6em;
   background: transparent;
   border: var(--ab-rule-hairline) solid var(--ab-ink);
   border-radius: var(--ab-radius);
   color: var(--ab-ink);
   font-family: var(--ab-font-micro);
-  font-size: var(--ab-text-micro);
+  font-size: 0.85em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  padding: 8px 14px;
+  padding: 0.6em 1em;
   cursor: pointer;
-  transition: background var(--ab-motion-fast), color var(--ab-motion-fast);
+  transition: background var(--ab-motion-fast, 180ms), color var(--ab-motion-fast, 180ms);
 }
 
 .spotify-connect-btn:hover:not(:disabled) {
@@ -74,31 +76,27 @@
   color: var(--ab-bg);
 }
 
-.spotify-connect-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
+.spotify-connect-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* ── track row ── */
 .spotify-track-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.9em;
   min-width: 0;
 }
 
 .spotify-album-art {
-  width: 52px;
-  height: 52px;
+  width: 3.4em;
+  height: 3.4em;
   object-fit: cover;
   flex-shrink: 0;
-  /* imagery is monochrome; colour belongs to the theme */
   filter: grayscale(1) contrast(1.15);
 }
 
 .spotify-album-placeholder {
-  width: 52px;
-  height: 52px;
+  width: 3.4em;
+  height: 3.4em;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -107,15 +105,12 @@
   color: var(--ab-ink-tertiary);
 }
 
-.spotify-track-info {
-  min-width: 0;
-  flex: 1;
-}
+.spotify-track-info { min-width: 0; flex: 1; }
 
 .spotify-track-name {
   font-family: var(--ab-font-ui);
   font-variation-settings: 'wdth' 82, 'wght' 800;
-  font-size: 16px;
+  font-size: 1.05em;
   line-height: 1.1;
   text-transform: uppercase;
   color: var(--ab-ink);
@@ -125,11 +120,11 @@
 }
 
 .spotify-track-artist {
-  margin-top: 3px;
+  margin-top: 0.2em;
   font-family: var(--ab-font-micro);
-  font-size: 10px;
+  font-size: 0.7em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ab-ink-tertiary);
   white-space: nowrap;
@@ -137,52 +132,48 @@
   text-overflow: ellipsis;
 }
 
-/* ── progress: hairline rail, accent fill, mono times ── */
+/* ── progress ── */
 .spotify-progress-bar {
   width: 100%;
-  height: 3px;
+  height: 0.2em;
+  min-height: 2px;
   background: var(--ab-rule);
   overflow: hidden;
 }
 
-.spotify-progress-fill {
-  height: 100%;
-  background: var(--ab-accent);
-}
+.spotify-progress-fill { height: 100%; background: var(--ab-accent); }
 
 .spotify-progress-times {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: 0.3em;
   font-family: var(--ab-font-micro);
-  font-size: 9px;
+  font-size: 0.62em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.1em;
   font-variant-numeric: tabular-nums;
   color: var(--ab-ink-tertiary);
 }
 
 /* ── controls: square, hairline, invert on hover ── */
-.spotify-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.spotify-controls { display: flex; align-items: center; gap: 0.6em; }
 
 .spotify-ctrl-btn {
   appearance: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 2.3em;
+  height: 2.3em;
   background: transparent;
   border: var(--ab-rule-hairline) solid var(--ab-rule);
   border-radius: var(--ab-radius);
   color: var(--ab-ink);
   cursor: pointer;
-  transition: background var(--ab-motion-fast), color var(--ab-motion-fast), border-color var(--ab-motion-fast);
+  transition: background var(--ab-motion-fast, 180ms), color var(--ab-motion-fast, 180ms), border-color var(--ab-motion-fast, 180ms);
 }
+
+.spotify-ctrl-btn svg { width: 1.1em; height: 1.1em; }
 
 .spotify-ctrl-btn:hover {
   background: var(--ab-ink);
@@ -190,22 +181,16 @@
   border-color: var(--ab-ink);
 }
 
-.spotify-ctrl-btn.play-btn {
-  border-color: var(--ab-ink);
-}
+.spotify-ctrl-btn.play-btn { border-color: var(--ab-ink); }
 
 /* ── volume ── */
-.spotify-volume-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.spotify-volume-row { display: flex; align-items: center; gap: 0.7em; }
 
 .spotify-volume-label {
   font-family: var(--ab-font-micro);
-  font-size: 9px;
+  font-size: 0.62em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ab-ink-tertiary);
   flex-shrink: 0;
@@ -214,7 +199,8 @@
 .spotify-slider {
   flex: 1;
   appearance: none;
-  height: 3px;
+  height: 0.2em;
+  min-height: 2px;
   background: var(--ab-rule);
   outline: none;
   cursor: pointer;
@@ -222,46 +208,46 @@
 
 .spotify-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 9px;
-  height: 9px;
+  width: 0.7em;
+  height: 0.7em;
   border-radius: 0;
   background: var(--ab-ink);
 }
 
 .spotify-volume-pct {
   font-family: var(--ab-font-micro);
-  font-size: 9px;
+  font-size: 0.62em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.1em;
   font-variant-numeric: tabular-nums;
   color: var(--ab-ink-tertiary);
-  min-width: 30px;
+  min-width: 2.2em;
   text-align: right;
 }
 
 /* ── shuffle ── */
-.spotify-extras {
-  display: flex;
-}
+.spotify-extras { display: flex; }
 
 .spotify-shuffle-btn {
   appearance: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.4em;
   background: transparent;
   border: var(--ab-rule-hairline) solid var(--ab-rule);
   border-radius: var(--ab-radius);
   color: var(--ab-ink-tertiary);
   font-family: var(--ab-font-micro);
-  font-size: 9px;
+  font-size: 0.62em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 5px 10px;
+  padding: 0.35em 0.7em;
   cursor: pointer;
-  transition: color var(--ab-motion-fast), border-color var(--ab-motion-fast);
+  transition: color var(--ab-motion-fast, 180ms), border-color var(--ab-motion-fast, 180ms);
 }
+
+.spotify-shuffle-btn svg { width: 0.9em; height: 0.9em; }
 
 .spotify-shuffle-btn.active {
   color: var(--ab-accent);

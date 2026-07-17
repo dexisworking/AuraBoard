@@ -45,11 +45,17 @@ export default function DateWidget({ timeZone }) {
   });
 
   return (
-    <div className="w-full h-full flex flex-col justify-center text-ink px-2">
-      <span className="ab-display" style={{ fontSize: 44 }}>{weekday}</span>
-      <div className="ab-rule-h mt-2 pt-2">
-        <span className="ab-micro text-ink-secondary">
-          <span className="text-accent">{day}</span> {month} {year}
+    <div
+      className="w-full h-full flex flex-col justify-center text-ink"
+      style={{ padding: '4cqmin 5cqmin', fontSize: 'min(34cqh, 11cqw)' }}
+    >
+      <span className="ab-display" style={{ fontSize: '1em', lineHeight: 0.9 }}>{weekday}</span>
+      <div className="ab-rule-h" style={{ marginTop: '0.35em', paddingTop: '0.3em' }}>
+        <span
+          className="ab-numeric text-ink-secondary"
+          style={{ fontSize: '0.28em', letterSpacing: '0.14em' }}
+        >
+          <span className="text-accent">{day}</span> {month.toUpperCase()} {year}
         </span>
       </div>
     </div>

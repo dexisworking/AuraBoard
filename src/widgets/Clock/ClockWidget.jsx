@@ -38,8 +38,11 @@ export default function ClockWidget({ use24hr = false, timeZone }) {
   }).format(time);
 
   return (
-    <div className="w-full h-full flex items-center justify-center text-ink">
-      <div className="ab-numeric" style={{ fontSize: 92 }}>
+    <div
+      className="w-full h-full flex items-center justify-center text-ink"
+      style={{ fontSize: 'min(46cqh, 21cqw)' }}
+    >
+      <div className="ab-numeric" style={{ fontSize: '1em' }}>
         {hours}
         <span
           className="text-accent"
@@ -49,12 +52,17 @@ export default function ClockWidget({ use24hr = false, timeZone }) {
         </span>
         {minutes}
       </div>
-      <div className="ml-3 flex flex-col justify-end gap-1 pb-2">
-        <span className="ab-numeric text-ink-secondary" style={{ fontSize: 28 }}>
+      <div className="flex flex-col justify-end" style={{ marginLeft: '0.12em', gap: '0.05em', paddingBottom: '0.08em' }}>
+        <span className="ab-numeric text-ink-secondary" style={{ fontSize: '0.3em' }}>
           {seconds}
         </span>
         {!use24hr && ampm && (
-          <span className="ab-micro text-ink-tertiary">{ampm}</span>
+          <span
+            className="ab-numeric text-ink-tertiary"
+            style={{ fontSize: '0.16em', letterSpacing: '0.1em' }}
+          >
+            {ampm}
+          </span>
         )}
       </div>
       <style>{`

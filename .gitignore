@@ -35,3 +35,10 @@ electron-store-data/
 # Lint output artifacts
 lint_errors.txt
 eslint-report.json
+
+# Dev screenshot/probe harness (puppeteer)
+_shot.cjs
+_probe.cjs
+_capture.cjs
+_capture.log
+_shot.png

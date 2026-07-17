@@ -1,7 +1,6 @@
 /**
  * SportsWidget — Swiss/Brutalist. Colour via --ab-* tokens, structure via
- * shared primitives. Fixture "cards" become ruled rows; the ticker keeps its
- * marquee but in tracked-out mono.
+ * shared primitives, sizes in em (container-responsive root).
  */
 
 .sports-fixtures {
@@ -10,13 +9,14 @@
   flex: 1;
   justify-content: center;
   min-height: 0;
+  overflow: hidden;
 }
 
 .sports-empty {
   font-family: var(--ab-font-micro);
-  font-size: var(--ab-text-micro);
+  font-size: 0.85em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ab-ink-tertiary);
 }
@@ -24,8 +24,8 @@
 .sports-fixture-row {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 7px 0;
+  gap: 0.2em;
+  padding: 0.5em 0;
   border-bottom: var(--ab-rule-hairline) solid var(--ab-rule);
 }
 
@@ -35,9 +35,9 @@
 
 .sports-league-badge {
   font-family: var(--ab-font-micro);
-  font-size: 9px;
+  font-size: 0.62em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-micro);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ab-accent);
 }
@@ -45,14 +45,14 @@
 .sports-teams {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 0.6em;
   min-width: 0;
 }
 
 .sports-team {
   font-family: var(--ab-font-ui);
   font-variation-settings: 'wdth' 88, 'wght' 700;
-  font-size: 13px;
+  font-size: 0.92em;
   text-transform: uppercase;
   letter-spacing: 0.01em;
   color: var(--ab-ink);
@@ -69,16 +69,16 @@
   font-family: var(--ab-font-numeric);
   font-variation-settings: var(--ab-axes-numeric-tight);
   font-variant-numeric: tabular-nums;
-  font-size: 13px;
+  font-size: 0.92em;
   color: var(--ab-ink-secondary);
   flex-shrink: 0;
 }
 
 .sports-fixture-meta {
   font-family: var(--ab-font-micro);
-  font-size: 9px;
+  font-size: 0.62em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ab-ink-tertiary);
 }
@@ -88,13 +88,13 @@
   flex-shrink: 0;
   overflow: hidden;
   border-top: var(--ab-rule-hairline) solid var(--ab-rule);
-  padding-top: 7px;
-  margin-top: 6px;
+  padding-top: 0.5em;
+  margin-top: 0.4em;
 }
 
 .sports-ticker {
   display: flex;
-  gap: 28px;
+  gap: 2em;
   white-space: nowrap;
   width: max-content;
   animation: sports-ticker-scroll 45s linear infinite;
@@ -102,16 +102,16 @@
 
 .sports-ticker-item {
   font-family: var(--ab-font-micro);
-  font-size: 10px;
+  font-size: 0.7em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ab-ink-secondary);
 }
 
 .sports-ticker-dot {
   color: var(--ab-accent);
-  margin-right: 8px;
+  margin-right: 0.6em;
 }
 
 @keyframes sports-ticker-scroll {

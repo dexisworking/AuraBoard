@@ -1,7 +1,6 @@
 /**
- * NewsWidget — Swiss/Brutalist. Headlines are editorial content: the expanded
- * story reads like a poster excerpt — condensed bold title, hairline rules,
- * mono metadata. Ticker is tracked-out mono caps.
+ * NewsWidget — Swiss/Brutalist. Expanded story reads like a poster excerpt;
+ * ticker is tracked-out mono caps. Sizes in em (container-responsive root).
  */
 
 .news-expanded {
@@ -9,7 +8,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 8px;
+  gap: 0.7em;
   min-height: 0;
   cursor: pointer;
   overflow: hidden;
@@ -19,7 +18,7 @@
   margin: 0;
   font-family: var(--ab-font-ui);
   font-variation-settings: 'wdth' 82, 'wght' 800;
-  font-size: 21px;
+  font-size: 1.5em;
   line-height: 1.08;
   text-transform: uppercase;
   letter-spacing: -0.005em;
@@ -34,7 +33,7 @@
   margin: 0;
   font-family: var(--ab-font-ui);
   font-variation-settings: 'wdth' 100, 'wght' 450;
-  font-size: 12px;
+  font-size: 0.85em;
   line-height: 1.45;
   color: var(--ab-ink-secondary);
   display: -webkit-box;
@@ -45,25 +44,25 @@
 
 .news-expanded-meta {
   display: flex;
-  gap: 14px;
-  padding-top: 6px;
+  gap: 1em;
+  padding-top: 0.5em;
   border-top: var(--ab-rule-hairline) solid var(--ab-rule);
 }
 
 .news-expanded-source {
   font-family: var(--ab-font-micro);
-  font-size: 9px;
+  font-size: 0.62em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-micro);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ab-accent);
 }
 
 .news-expanded-time {
   font-family: var(--ab-font-micro);
-  font-size: 9px;
+  font-size: 0.62em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ab-ink-tertiary);
 }
@@ -74,12 +73,12 @@
   overflow: hidden;
   margin-top: auto;
   border-top: var(--ab-rule-hairline) solid var(--ab-rule);
-  padding-top: 8px;
+  padding-top: 0.6em;
 }
 
 .news-ticker {
   display: flex;
-  gap: 28px;
+  gap: 2em;
   white-space: nowrap;
   width: max-content;
   animation: news-ticker-scroll 60s linear infinite;
@@ -96,12 +95,12 @@
   padding: 0;
   cursor: pointer;
   font-family: var(--ab-font-micro);
-  font-size: 10px;
+  font-size: 0.72em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ab-ink-secondary);
-  transition: color var(--ab-motion-fast);
+  transition: color var(--ab-motion-fast, 180ms);
 }
 
 .news-ticker-item:hover {
@@ -110,7 +109,7 @@
 
 .news-ticker-dot {
   color: var(--ab-accent);
-  margin-right: 8px;
+  margin-right: 0.6em;
 }
 
 @keyframes news-ticker-scroll {

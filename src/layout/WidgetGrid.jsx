@@ -1,12 +1,12 @@
 /**
- * WidgetGrid — drag-and-drop widget layout engine using react-grid-layout v2.
- * 12-column grid, 60px row height, 10px margins.
- * EDIT MODE (Alt+E): drag widgets, resize from borders, remove buttons.
+ * WidgetGrid — drag-and-drop widget layout engine using react-grid-layout v1.5.
+ * 12-column grid; rowHeight is computed to fill the viewport height.
+ * EDIT MODE: drag widgets anywhere, free-resize from any edge/corner, remove.
  * DISPLAY MODE (default): static layout, no interaction.
  */
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { ReactGridLayout, useContainerWidth } from 'react-grid-layout';
+import GridLayout from 'react-grid-layout';
 import { getWidget, getDefaultLayout } from '../widgets/registry';
 
 import 'react-grid-layout/css/styles.css';
@@ -80,12 +80,6 @@ function normalizeLayout(layoutInput) {
         z,
       };
     });
-}
-
-function getGridColumnWidth(gridWidth) {
-  if (!gridWidth || gridWidth <= 0) return 0;
-  const usableWidth = gridWidth - MARGIN[0] * (COLS + 1);
-  return usableWidth > 0 ? usableWidth / COLS : 0;
 }
 
 function mergeLayoutWithPrevious(nextLayout, previousLayout) {
@@ -172,66 +166,6 @@ function EditBanner() {
   );
 }
 
-/* ── Full Widget Scaling ── */
-function ScaleWrapper({ children, defaultGridW, defaultGridH, colWidth, rowHeight = ROW_HEIGHT }) {
-  const ref = useRef(null);
-  const [scale, setScale] = useState(1);
-  const [mounted, setMounted] = useState(false);
-
-  const safeColWidth = colWidth > 0 ? colWidth : 1;
-  const safeRowHeight = rowHeight > 0 ? rowHeight : ROW_HEIGHT;
-  const baseW = defaultGridW * safeColWidth + (defaultGridW - 1) * MARGIN[0];
-  const baseH = defaultGridH * safeRowHeight + (defaultGridH - 1) * MARGIN[1];
-
-  useEffect(() => {
-    setMounted(true);
-    let rAF;
-    const ob = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      // Slight debounce using rAF to prevent loop limits
-      rAF = requestAnimationFrame(() => {
-        const widthScale = width > 0 && baseW > 0 ? width / baseW : 1;
-        const heightScale = height > 0 && baseH > 0 ? height / baseH : 1;
-        const nextScale = Math.max(0.1, Math.min(widthScale, heightScale));
-        setScale(Number.isFinite(nextScale) ? nextScale : 1);
-      });
-    });
-    if (ref.current && ref.current.parentElement) {
-      ob.observe(ref.current.parentElement);
-    }
-    return () => {
-      ob.disconnect();
-      cancelAnimationFrame(rAF);
-    };
-  }, [baseW, baseH]);
-
-  return (
-    <div style={{
-      width: '100%',
-      height: '100%',
-      overflow: 'hidden',
-      position: 'relative',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      <div
-        ref={ref}
-        style={{
-          width: baseW,
-          height: baseH,
-          transform: `scale(${scale})`,
-          transformOrigin: 'center center',
-          opacity: mounted ? 1 : 0,
-          transition: 'opacity 0.2s',
-          boxSizing: 'border-box',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
 
 export default function WidgetGrid({
   editMode = false,
@@ -243,28 +177,34 @@ export default function WidgetGrid({
 }) {
   const [layout, setLayout] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
-  const { width, mounted: widthReady, containerRef } = useContainerWidth();
-  const colWidth = getGridColumnWidth(width);
+  const containerRef = useRef(null);
+  const width = containerWidth;
+  const widthReady = containerWidth > 0;
   const layoutRef = useRef(layout);
   const persistedSignatureRef = useRef('');
   const pendingPersistLayoutRef = useRef(null);
   const saveInFlightRef = useRef(false);
 
-  /* ── measure container height so rowHeight can fill the viewport ──
-     The board is full-screen; without this the grid only occupies
-     rows*ROW_HEIGHT px and clusters at the top with a large void below. */
+  /* ── measure the container so GridLayout gets an explicit width and rowHeight
+     can fill the viewport height (v1 GridLayout needs a numeric width; without
+     the height measure the grid would cluster in a short band at the top). */
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return undefined;
-    const ro = new ResizeObserver((entries) => {
-      const h = entries[0]?.contentRect?.height ?? 0;
+    const measure = (w, h) => {
+      if (w > 0) setContainerWidth(w);
       if (h > 0) setContainerHeight(h);
+    };
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect;
+      if (r) measure(r.width, r.height);
     });
     ro.observe(el);
-    if (el.clientHeight > 0) setContainerHeight(el.clientHeight);
+    measure(el.clientWidth, el.clientHeight);
     return () => ro.disconnect();
-  }, [containerRef, widthReady, mounted]);
+  }, [mounted]);
 
   const emitDraftLayout = useCallback((nextLayout) => {
     if (!editMode || !onLayoutDraftChange || !Array.isArray(nextLayout)) return;
@@ -478,31 +418,30 @@ export default function WidgetGrid({
         onMouseDown={() => bringItemToFront(item.i)}
       >
         {editMode && <RemoveButton onClick={() => handleRemove(item.i)} />}
-        <div style={{
-          width: '100%', height: '100%',
-          // Chromeless board: widgets sit directly on the treated photo with no
-          // card behind them. Surface/border appear only in edit mode.
-          background: editMode
-            ? 'var(--ab-edit-surface, rgba(127,127,127,0.10))'
-            : 'transparent',
-          borderRadius: 'var(--ab-radius, 0)',
-          border: editMode
-            ? '1.5px dashed var(--ab-edit-border, currentColor)'
-            : '1px solid transparent',
-          transition: 'background 0.3s, border 0.3s',
-          boxSizing: 'border-box',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
+        <div
+          className="ab-cell"
+          style={{
+            width: '100%', height: '100%',
+            // Chromeless board: widgets sit directly on the treated photo with
+            // no card behind them. Surface/border appear only in edit mode.
+            background: editMode
+              ? 'var(--ab-edit-surface, rgba(127,127,127,0.10))'
+              : 'transparent',
+            borderRadius: 'var(--ab-radius, 0)',
+            border: editMode
+              ? '1.5px dashed var(--ab-edit-border, currentColor)'
+              : '1px solid transparent',
+            transition: 'background 0.3s, border 0.3s',
+            boxSizing: 'border-box',
+            position: 'relative',
+            overflow: 'hidden',
+            // Size container: widgets size their type to the cell via cq units,
+            // so content always fits regardless of how the cell is resized.
+            containerType: 'size',
+          }}
+        >
           <Suspense fallback={<WidgetLoader />}>
-            <ScaleWrapper
-              defaultGridW={meta.defaultSize.w}
-              defaultGridH={meta.defaultSize.h}
-              colWidth={colWidth}
-              rowHeight={rowHeight}
-            >
-              <Component {...widgetProps} />
-            </ScaleWrapper>
+            <Component {...widgetProps} />
           </Suspense>
         </div>
       </div>
@@ -510,9 +449,9 @@ export default function WidgetGrid({
   });
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+    <div ref={containerRef} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
       {editMode && <EditBanner />}
-      <ReactGridLayout
+      <GridLayout
         className={`widget-grid ${editMode ? 'is-editing' : ''}`}
         layout={visibleLayout}
         cols={COLS}
@@ -528,13 +467,13 @@ export default function WidgetGrid({
         compactType={null}
         allowOverlap
         preventCollision={false}
+        isBounded={false}
         onLayoutChange={handleLayoutChange}
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}
-        style={{ minHeight: '100%' }}
       >
         {widgetItems}
-      </ReactGridLayout>
+      </GridLayout>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 /**
  * StocksWidget — Swiss/Brutalist. Colour via --ab-* tokens, structure via
- * shared primitives. Only widget-specific layout lives here.
+ * shared primitives, sizes in em (container-responsive root).
  */
 
 .stocks-list {
@@ -20,17 +20,17 @@
 
 .stocks-symbol {
   font-family: var(--ab-font-micro);
-  font-size: var(--ab-text-micro);
+  font-size: 0.85em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ab-ink);
 }
 
 .stocks-name {
   font-family: var(--ab-font-micro);
-  font-size: 9px;
-  letter-spacing: var(--ab-track-label);
+  font-size: 0.62em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ab-ink-tertiary);
   white-space: nowrap;
@@ -49,31 +49,30 @@
   font-family: var(--ab-font-numeric);
   font-variation-settings: var(--ab-axes-numeric-tight);
   font-variant-numeric: tabular-nums;
-  font-size: 15px;
+  font-size: 1.05em;
   color: var(--ab-ink);
 }
 
 .stocks-change {
   font-family: var(--ab-font-micro);
-  font-size: 10px;
+  font-size: 0.68em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.1em;
   font-variant-numeric: tabular-nums;
 }
 
 .stocks-change.up { color: var(--ab-positive); }
 .stocks-change.down { color: var(--ab-negative); }
 
-/* market status chip: square dot, mechanical blink while open */
 .stocks-market-status {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.5em;
 }
 
 .stocks-status-dot {
-  width: 6px;
-  height: 6px;
+  width: 0.5em;
+  height: 0.5em;
   flex-shrink: 0;
   background: var(--ab-ink-tertiary);
 }

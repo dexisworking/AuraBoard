@@ -38,14 +38,14 @@ export default function GreetingWidget({ userName = '' }) {
 
   return (
     <div
-      className={`w-full h-full flex flex-col justify-center px-2 transition-opacity duration-1000 ease-in-out ${fadeState}`}
+      className={`w-full h-full flex flex-col justify-center transition-opacity duration-1000 ease-in-out ${fadeState}`}
+      style={{ padding: '4cqmin 5cqmin', fontSize: 'min(30cqh, 15cqw)' }}
     >
-      <h2 className="ab-display text-ink" style={{ fontSize: 58 }}>
+      <h2 className="ab-display text-ink" style={{ fontSize: '1em' }}>
         Good<br />
         {word}
         {userName && (
           <>
-            <span className="text-accent">,</span>
             <br />
             <span className="text-accent">{userName}</span>
           </>

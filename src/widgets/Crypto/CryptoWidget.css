@@ -1,7 +1,7 @@
 /**
- * CryptoWidget — Swiss/Brutalist. All colour via --ab-* tokens; structure via
- * shared primitives (ab-widget-root/header/row). Only widget-specific layout
- * lives here.
+ * CryptoWidget — Swiss/Brutalist. Colour via --ab-* tokens; structure via
+ * shared primitives. Sizes in em, relative to the container-responsive root
+ * font-size on .ab-widget-root, so the widget fits any cell.
  */
 
 .crypto-list {
@@ -13,10 +13,9 @@
 }
 
 .crypto-logo {
-  width: 22px;
-  height: 22px;
+  width: 1.9em;
+  height: 1.9em;
   flex-shrink: 0;
-  /* imagery is monochrome; colour belongs to the theme */
   filter: grayscale(1) contrast(1.15);
 }
 
@@ -29,17 +28,17 @@
 
 .crypto-symbol {
   font-family: var(--ab-font-micro);
-  font-size: var(--ab-text-micro);
+  font-size: 0.85em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ab-ink);
 }
 
 .crypto-name {
   font-family: var(--ab-font-micro);
-  font-size: 9px;
-  letter-spacing: var(--ab-track-label);
+  font-size: 0.62em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ab-ink-tertiary);
   white-space: nowrap;
@@ -49,6 +48,8 @@
 
 .crypto-sparkline {
   flex-shrink: 0;
+  width: 4.5em;
+  height: 1.6em;
   opacity: 0.9;
 }
 
@@ -57,29 +58,28 @@
   flex-direction: column;
   align-items: flex-end;
   flex-shrink: 0;
-  min-width: 76px;
+  min-width: 4.6em;
 }
 
 .crypto-price {
   font-family: var(--ab-font-numeric);
   font-variation-settings: var(--ab-axes-numeric-tight);
   font-variant-numeric: tabular-nums;
-  font-size: 15px;
+  font-size: 1.05em;
   color: var(--ab-ink);
 }
 
 .crypto-change {
   font-family: var(--ab-font-micro);
-  font-size: 10px;
+  font-size: 0.68em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.1em;
   font-variant-numeric: tabular-nums;
 }
 
 .crypto-change.up { color: var(--ab-positive); }
 .crypto-change.down { color: var(--ab-negative); }
 
-/* price-tick flash: stepped, mechanical */
 @keyframes crypto-flash {
   0%, 100% { background: transparent; }
   50% { background: var(--ab-edit-surface, rgba(127, 127, 127, 0.10)); }

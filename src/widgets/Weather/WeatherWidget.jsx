@@ -96,37 +96,45 @@ export default function WeatherWidget({ city = '', useFahrenheit = false }) {
 
   const { current, daily } = data;
 
+  const micro = {
+    fontFamily: 'var(--ab-font-micro)', fontSize: '0.9em', fontWeight: 600,
+    letterSpacing: '0.14em', textTransform: 'uppercase',
+  };
+
   return (
-    <div className="w-full h-full flex flex-col justify-center text-ink px-2">
+    <div
+      className="w-full h-full flex flex-col justify-center text-ink"
+      style={{ padding: '4cqmin 5cqmin', fontSize: 'min(9cqh, 4cqw)' }}
+    >
       {/* current temperature — the figure carries the widget */}
-      <div className="flex items-end gap-3">
-        <span className="ab-numeric" style={{ fontSize: 76 }}>
+      <div className="flex items-end" style={{ gap: '0.9em' }}>
+        <span className="ab-numeric" style={{ fontSize: '5em', lineHeight: 0.9 }}>
           {Math.round(current.temperature_2m)}
           <span className="text-accent">°</span>
         </span>
-        <div className="flex flex-col pb-2">
-          <span className="ab-micro text-ink">{wmoLabel(current.weathercode)}</span>
-          <span className="ab-micro text-ink-tertiary mt-1">
+        <div className="flex flex-col" style={{ paddingBottom: '0.6em' }}>
+          <span className="text-ink" style={micro}>{wmoLabel(current.weathercode)}</span>
+          <span className="text-ink-tertiary" style={{ ...micro, marginTop: '0.3em' }}>
             {locationName || 'Local area'}
           </span>
         </div>
       </div>
 
       {/* detail strip */}
-      <div className="ab-rule-h mt-2 pt-2 flex gap-4">
-        <span className="ab-micro text-ink-secondary">
+      <div className="ab-rule-h flex" style={{ marginTop: '0.7em', paddingTop: '0.6em', gap: '1.2em' }}>
+        <span className="text-ink-secondary" style={micro}>
           Feels {Math.round(current.apparent_temperature)}°
         </span>
-        <span className="ab-micro text-ink-secondary">
+        <span className="text-ink-secondary" style={micro}>
           Hum {current.relativehumidity_2m}%
         </span>
-        <span className="ab-micro text-ink-secondary">
+        <span className="text-ink-secondary" style={micro}>
           Wind {Math.round(current.windspeed_10m)}
         </span>
       </div>
 
       {/* three-day forecast — ruled columns, figures only */}
-      <div className="flex mt-3">
+      <div className="flex" style={{ marginTop: '0.9em' }}>
         {daily.time.slice(1, 4).map((timeStr, index) => {
           const i = index + 1;
           const dayName = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
@@ -135,16 +143,17 @@ export default function WeatherWidget({ city = '', useFahrenheit = false }) {
           return (
             <div
               key={timeStr}
-              className="flex-1 flex flex-col gap-1"
+              className="flex-1 flex flex-col"
               style={{
+                gap: '0.3em',
                 borderLeft: index === 0 ? 'none' : 'var(--ab-rule-hairline) solid var(--ab-rule)',
-                paddingLeft: index === 0 ? 0 : 12,
+                paddingLeft: index === 0 ? 0 : '0.9em',
               }}
             >
-              <span className="ab-micro text-ink-tertiary">{dayName}</span>
-              <span className="ab-figure" style={{ fontSize: 22 }}>
+              <span className="text-ink-tertiary" style={micro}>{dayName}</span>
+              <span className="ab-figure" style={{ fontSize: '1.6em' }}>
                 {Math.round(daily.temperature_2m_max[i])}°
-                <span className="text-ink-tertiary" style={{ fontSize: 15 }}>
+                <span className="text-ink-tertiary" style={{ fontSize: '0.7em' }}>
                   {' '}{Math.round(daily.temperature_2m_min[i])}°
                 </span>
               </span>

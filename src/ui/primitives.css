@@ -1,20 +1,25 @@
 /**
  * Shared widget primitives — Swiss/Brutalist.
- * Replaces the near-identical root/header/skeleton/error blocks that each of
- * the five data widgets used to restate with hardcoded colors.
- * Everything reads --ab-* tokens; nothing here names a colour directly.
+ * Sizing is container-relative: the widget cell (.ab-cell in WidgetGrid) is a
+ * CSS size container, and roots derive a base font-size from `cqmin`, with all
+ * child text expressed in `em`. So every widget scales to fit its cell no
+ * matter how it's resized — no transform hacks, no overflow.
  */
+
+.ab-cell { container-type: size; }
 
 .ab-widget-root {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 14px 16px;
+  padding: 5cqmin 6cqmin;
   box-sizing: border-box;
   color: var(--ab-ink);
   font-family: var(--ab-font-ui);
   overflow: hidden;
+  /* base unit: scales with the smaller cell dimension, clamped for legibility */
+  font-size: clamp(8px, 3.4cqmin, 15px);
 }
 
 /* ── Header: micro-caption strip over a hairline, the Swiss signature ── */
@@ -22,27 +27,28 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 8px;
-  margin-bottom: 10px;
+  gap: 0.8em;
+  padding-bottom: 0.5em;
+  margin-bottom: 0.7em;
   border-bottom: var(--ab-rule-hairline) solid var(--ab-rule);
   flex-shrink: 0;
 }
 
 .ab-widget-title {
   font-family: var(--ab-font-micro);
-  font-size: var(--ab-text-micro);
+  font-size: 0.85em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-micro);
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ab-accent);
+  white-space: nowrap;
 }
 
 .ab-widget-meta {
   font-family: var(--ab-font-micro);
-  font-size: var(--ab-text-micro);
+  font-size: 0.8em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ab-ink-tertiary);
   white-space: nowrap;
@@ -64,15 +70,16 @@
 .ab-skeleton-rows {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.8em;
   flex: 1;
   justify-content: center;
+  min-height: 0;
 }
 
 .ab-skeleton-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.9em;
 }
 
 /* ── Error / empty state ── */
@@ -82,14 +89,15 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 12px;
+  gap: 0.9em;
+  min-height: 0;
 }
 
 .ab-state-message {
   font-family: var(--ab-font-micro);
-  font-size: var(--ab-text-micro);
+  font-size: 0.85em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   line-height: 1.7;
   color: var(--ab-ink-secondary);
@@ -107,13 +115,13 @@
   border-radius: var(--ab-radius);
   color: var(--ab-ink);
   font-family: var(--ab-font-micro);
-  font-size: var(--ab-text-micro);
+  font-size: 0.8em;
   font-weight: 600;
-  letter-spacing: var(--ab-track-label);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  padding: 7px 14px;
+  padding: 0.5em 1em;
   cursor: pointer;
-  transition: background var(--ab-motion-fast), color var(--ab-motion-fast);
+  transition: background var(--ab-motion-fast, 180ms), color var(--ab-motion-fast, 180ms);
 }
 
 .ab-btn:hover {
@@ -125,9 +133,10 @@
 .ab-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 7px 0;
+  gap: 0.9em;
+  padding: 0.5em 0;
   border-bottom: var(--ab-rule-hairline) solid var(--ab-rule);
+  min-height: 0;
 }
 
 .ab-row:last-child {
