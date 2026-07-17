@@ -48,6 +48,7 @@ async function initStore() {
         stockSymbols: 'AAPL,MSFT,GOOGL,AMZN,TSLA',
         cryptoCoinIds: 'bitcoin,ethereum,solana,binancecoin,cardano',
         sportsLeagues: '4387,4328',
+        autostart: false,
       },
     });
   } catch (err) {
@@ -64,6 +65,7 @@ async function initStore() {
       uiFont: 'outfit',
       screensaverUseAllDisplays: true,
       screensaverDisplayIds: [],
+      autostart: false,
     };
     store = {
       get: (key, def) => (key in mem ? mem[key] : def),
@@ -450,6 +452,7 @@ function setupIPC() {
       stockSymbols: store ? store.get('stockSymbols', 'AAPL,MSFT,GOOGL,AMZN,TSLA') : 'AAPL,MSFT,GOOGL,AMZN,TSLA',
       cryptoCoinIds: store ? store.get('cryptoCoinIds', 'bitcoin,ethereum,solana,binancecoin,cardano') : 'bitcoin,ethereum,solana,binancecoin,cardano',
       sportsLeagues: store ? store.get('sportsLeagues', '4387,4328') : '4387,4328',
+      autostart: store ? store.get('autostart', false) : false,
     };
   });
 
@@ -517,6 +520,23 @@ function setupIPC() {
     }
     if (data.sportsLeagues !== undefined) {
       store.set('sportsLeagues', String(data.sportsLeagues));
+    }
+    if (data.autostart !== undefined) {
+      const autostart = Boolean(data.autostart);
+      store.set('autostart', autostart);
+      try {
+        if (!app.isPackaged) {
+          // Dev mode login settings might not work or register electron.exe
+          console.log('Skipping login item settings write in development mode');
+        } else {
+          app.setLoginItemSettings({
+            openAtLogin: autostart,
+            path: app.getPath('exe'),
+          });
+        }
+      } catch (err) {
+        console.error('Failed to set login item settings:', err);
+      }
     }
     return { success: true };
   });

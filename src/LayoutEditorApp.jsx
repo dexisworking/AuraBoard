@@ -221,7 +221,11 @@ export default function LayoutEditorApp() {
       {showWidgetManager && (
         <div
           className="absolute top-20 right-6 z-[70] w-80 max-h-[70vh] overflow-y-auto border p-4 scrollbar-hide"
-          style={{ background: 'var(--ab-surface)', borderColor: 'var(--ab-rule-strong)' }}
+          style={{
+            background: 'var(--ab-surface)',
+            borderColor: 'var(--ab-rule-strong)',
+            animation: 'ab-panel-slide-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both',
+          }}
         >
           <p className="text-[10px] uppercase tracking-[0.22em] text-accent mb-3 font-micro font-semibold">
             Add / Remove Widgets

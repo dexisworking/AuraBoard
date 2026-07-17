@@ -118,3 +118,60 @@
   bottom: -12px; left: -12px;
   cursor: nesw-resize;
 }
+
+/* ── Edit-mode entrance micro-animations ─────────────────────────────── */
+
+/* Banner slides down from above */
+@keyframes ab-banner-enter {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.ab-edit-banner {
+  animation: ab-banner-enter 340ms var(--ab-ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+/* Remove (×) button pops in with a slight scale bounce */
+@keyframes ab-remove-pop {
+  0%   { opacity: 0; transform: scale(0.5); }
+  60%  { opacity: 1; transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.ab-remove-btn {
+  animation: ab-remove-pop 280ms var(--ab-ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+/* Stagger remove buttons per widget */
+.react-grid-item:nth-child(1) .ab-remove-btn { animation-delay: 60ms; }
+.react-grid-item:nth-child(2) .ab-remove-btn { animation-delay: 100ms; }
+.react-grid-item:nth-child(3) .ab-remove-btn { animation-delay: 140ms; }
+.react-grid-item:nth-child(4) .ab-remove-btn { animation-delay: 180ms; }
+.react-grid-item:nth-child(5) .ab-remove-btn { animation-delay: 220ms; }
+.react-grid-item:nth-child(6) .ab-remove-btn { animation-delay: 260ms; }
+.react-grid-item:nth-child(7) .ab-remove-btn { animation-delay: 300ms; }
+.react-grid-item:nth-child(n+8) .ab-remove-btn { animation-delay: 340ms; }
+
+.ab-remove-btn:hover {
+  transform: scale(1.15);
+}
+
+.ab-remove-btn:active {
+  transform: scale(0.9);
+}
+
+/* Cells flash once when edit mode activates */
+@keyframes ab-cell-highlight {
+  0%   { box-shadow: inset 0 0 0 0 var(--ab-accent); }
+  40%  { box-shadow: inset 0 0 0 1.5px var(--ab-accent); }
+  100% { box-shadow: none; }
+}
+
+.widget-grid.is-editing .react-grid-item > div {
+  animation: ab-cell-highlight 600ms var(--ab-ease-out, cubic-bezier(0.16, 1, 0.3, 1)) 100ms both;
+}
+
+/* Variant switch crossfade on the cell interior */
+.ab-cell > * {
+  transition: opacity 280ms ease;
+}

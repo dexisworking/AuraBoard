@@ -132,6 +132,7 @@ export default function SettingsApp() {
   const [screensaverUseAllDisplays, setScreensaverUseAllDisplays] =
     useState(true);
   const [screensaverDisplayIds, setScreensaverDisplayIds] = useState([]);
+  const [autostart, setAutostart] = useState(false);
 
   const allWidgets = useMemo(() => getAllWidgets(), []);
 
@@ -183,6 +184,7 @@ export default function SettingsApp() {
             : [],
         );
         setAvailableDisplays(Array.isArray(displays) ? displays : []);
+        setAutostart(Boolean(settings.autostart));
 
         if (Array.isArray(savedWidgets) && savedWidgets.length > 0) {
           setEnabledWidgets(savedWidgets);
@@ -319,6 +321,7 @@ export default function SettingsApp() {
         stockSymbols,
         cryptoCoinIds,
         sportsLeagues,
+        autostart,
       });
 
       // Save enabled widgets separately
@@ -472,7 +475,7 @@ export default function SettingsApp() {
             </div>
 
             {/* General Section */}
-            <section className="border border-surface-border bg-surface p-7">
+            <section className="border border-surface-border bg-surface p-7 ab-reveal ab-reveal-d1">
               <div className="mb-6">
                 <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
                   General
@@ -518,6 +521,13 @@ export default function SettingsApp() {
                   description="Disable to target specific monitors."
                 />
 
+                <ToggleSwitch
+                  checked={autostart}
+                  onChange={setAutostart}
+                  label="Launch at startup"
+                  description="Start AuraBoard automatically when your computer turns on."
+                />
+
                 {!screensaverUseAllDisplays && (
                   <div className="bg-ground border border-[color:var(--ab-rule)] p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-ink-tertiary mb-3">
@@ -559,7 +569,7 @@ export default function SettingsApp() {
             </section>
 
             {/* Appearance Section */}
-            <section className="border border-surface-border bg-surface p-7">
+            <section className="border border-surface-border bg-surface p-7 ab-reveal ab-reveal-d2">
               <div className="mb-6">
                 <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
                   Appearance
@@ -631,7 +641,7 @@ export default function SettingsApp() {
             </section>
 
             {/* Widgets Section — Phase 5 */}
-            <section className="border border-surface-border bg-surface p-7">
+            <section className="border border-surface-border bg-surface p-7 ab-reveal ab-reveal-d3">
               <div className="mb-6">
                 <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
                   Widgets
@@ -655,7 +665,7 @@ export default function SettingsApp() {
             </section>
 
             {/* Layout Presets & Edit — Phase 5 */}
-            <section className="border border-surface-border bg-surface p-7">
+            <section className="border border-surface-border bg-surface p-7 ab-reveal ab-reveal-d4">
               <div className="mb-6">
                 <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
                   Layout Presets
@@ -699,7 +709,7 @@ export default function SettingsApp() {
             </section>
 
             {/* Background Section */}
-            <section className="border border-surface-border bg-surface p-7">
+            <section className="border border-surface-border bg-surface p-7 ab-reveal ab-reveal-d5">
               <div className="flex items-start justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
@@ -816,7 +826,7 @@ export default function SettingsApp() {
             </section>
 
             {/* Spotify Section */}
-            <section className="border border-surface-border bg-surface p-7">
+            <section className="border border-surface-border bg-surface p-7 ab-reveal ab-reveal-d6">
               <div className="flex items-start justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-xl font-semibold text-ink text-[var(--ab-accent)]">
@@ -918,7 +928,7 @@ export default function SettingsApp() {
             </section>
 
             {/* API Keys & Data Section — Phase 5 */}
-            <section className="border border-surface-border bg-surface p-7">
+            <section className="border border-surface-border bg-surface p-7 ab-reveal ab-reveal-d7">
               <div className="mb-6">
                 <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
                   API Keys &amp; Data

@@ -134,6 +134,7 @@ function WidgetLoader() {
 function RemoveButton({ onClick }) {
   return (
     <button
+      className="ab-remove-btn"
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       style={{
         position: 'absolute', top: 8, right: 8, zIndex: 50,
@@ -142,10 +143,8 @@ function RemoveButton({ onClick }) {
         color: 'var(--ab-accent-ink, #fff)', fontSize: 13, lineHeight: '24px',
         fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center',
         justifyContent: 'center',
-        transition: 'opacity 0.15s',
+        transition: 'transform 160ms var(--ab-ease-out, ease)',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.75'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
       title="Remove widget"
     >
       ✕
@@ -156,15 +155,18 @@ function RemoveButton({ onClick }) {
 /* ── edit-mode indicator overlay ── */
 function EditBanner() {
   return (
-    <div style={{
-      position: 'fixed', top: 72, left: '50%', transform: 'translateX(-50%)',
-      zIndex: 9999, padding: '7px 18px', borderRadius: 0,
-      background: 'var(--ab-accent, #FF2B12)',
-      color: 'var(--ab-accent-ink, #fff)', fontSize: 11, fontWeight: 600,
-      fontFamily: 'var(--ab-font-micro, monospace)',
-      letterSpacing: '0.18em', textTransform: 'uppercase',
-      pointerEvents: 'none', userSelect: 'none',
-    }}>
+    <div
+      className="ab-edit-banner"
+      style={{
+        position: 'fixed', top: 72, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 9999, padding: '7px 18px', borderRadius: 0,
+        background: 'var(--ab-accent, #FF2B12)',
+        color: 'var(--ab-accent-ink, #fff)', fontSize: 11, fontWeight: 600,
+        fontFamily: 'var(--ab-font-micro, monospace)',
+        letterSpacing: '0.18em', textTransform: 'uppercase',
+        pointerEvents: 'none', userSelect: 'none',
+      }}
+    >
       Edit Mode — drag &amp; resize · Alt+E to exit
     </div>
   );
