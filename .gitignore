@@ -31,3 +31,7 @@ dist/
 .env
 *.env
 electron-store-data/
+
+# Lint output artifacts
+lint_errors.txt
+eslint-report.json

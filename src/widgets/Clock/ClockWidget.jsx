@@ -1,20 +1,9 @@
 import { useState, useEffect } from 'react';
 
-// Using a display font from Google Fonts
-const FONT_URL = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@200;400&family=Outfit:wght@200;300;400&display=swap";
-
 export default function ClockWidget({ use24hr = false, timeZone }) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
-    // Inject the font if not present
-    if (!document.querySelector(`link[href="${FONT_URL}"]`)) {
-      const link = document.createElement('link');
-      link.href = FONT_URL;
-      link.rel = 'stylesheet';
-      document.head.appendChild(link);
-    }
-
     const timer = setInterval(() => {
       setTime(new Date());
     }, 1000);
@@ -53,7 +42,7 @@ export default function ClockWidget({ use24hr = false, timeZone }) {
   const seconds = secondsFormatter.format(time);
 
   return (
-    <div className="flex items-baseline text-white" style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className="w-full h-full flex items-center justify-center text-white" style={{ fontFamily: 'inherit' }}>
       <div 
         className="text-8xl tabular-nums tracking-tight font-light drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
       >

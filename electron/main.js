@@ -1,15 +1,20 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, powerMonitor, nativeImage, dialog } from 'electron';
+import { app, BrowserWindow, Tray, Menu, ipcMain, powerMonitor, nativeImage, dialog, screen } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { startAuth, isAuthenticated, disconnectSpotify, getSpotifyUsername } from './spotify-auth.js';
 import * as spotifyApi from './spotify-api.js';
+import RssParser from 'rss-parser';
+import yahooFinance from 'yahoo-finance2';
+
+const rssParser = new RssParser();
 
 // __dirname and __filename are automatically provided by electron-vite
 
 let store = null;
-let screensaverWindow = null;
+let screensaverWindows = [];
 let settingsWindow = null;
+let layoutEditorWindow = null; // Phase 5.1 layout editor window
 let tray = null;
 let idleCheckInterval = null;
 const isDev = !app.isPackaged;
@@ -27,6 +32,18 @@ async function initStore() {
         slideshowTransition: 'fade',
         slideshowShuffle: false,
         spotifyPollInterval: 3,
+        uiTheme: 'aurora',
+        uiFont: 'outfit',
+        screensaverUseAllDisplays: true,
+        screensaverDisplayIds: [],
+        // Phase 5 — widget system
+        widgetLayout: null,
+        enabledWidgets: ['clock', 'date', 'greeting', 'weather', 'spotify'],
+        gnewsApiKey: '',
+        alphaVantageApiKey: '',
+        stockSymbols: 'AAPL,MSFT,GOOGL,AMZN,TSLA',
+        cryptoCoinIds: 'bitcoin,ethereum,solana,binancecoin,cardano',
+        sportsLeagues: '4387,4328',
       },
     });
   } catch (err) {
@@ -39,6 +56,10 @@ async function initStore() {
       slideshowTransition: 'fade',
       slideshowShuffle: false,
       spotifyPollInterval: 3,
+      uiTheme: 'aurora',
+      uiFont: 'outfit',
+      screensaverUseAllDisplays: true,
+      screensaverDisplayIds: [],
     };
     store = {
       get: (key, def) => (key in mem ? mem[key] : def),
@@ -102,63 +123,124 @@ function getSettingsURL() {
 }
 
 // ── Screensaver Window ────────────────────────────────────────────────
-function createScreensaverWindow() {
-  if (screensaverWindow && !screensaverWindow.isDestroyed()) {
-    screensaverWindow.show();
-    screensaverWindow.focus();
-    screensaverWindow.webContents.send('screensaver-activate');
-    return;
-  }
+function getAvailableDisplays() {
+  const displays = screen.getAllDisplays();
+  const primaryId = screen.getPrimaryDisplay()?.id;
 
-  screensaverWindow = new BrowserWindow({
-    fullscreen: true,
-    frame: false,
-    alwaysOnTop: true,
-    transparent: false,
-    backgroundColor: '#000000',
-    show: false,
-    skipTaskbar: true,
-    webPreferences: {
-      preload: path.join(__dirname, '..', 'preload', 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-      webSecurity: false, // Allow loading local file:// URIs for user slide backgrounds
+  return displays.map((display, index) => ({
+    id: Number(display.id),
+    label: `Display ${index + 1}${display.id === primaryId ? ' (Primary)' : ''}`,
+    primary: display.id === primaryId,
+    scaleFactor: display.scaleFactor,
+    bounds: {
+      x: display.bounds.x,
+      y: display.bounds.y,
+      width: display.bounds.width,
+      height: display.bounds.height,
     },
-  });
+  }));
+}
 
-  screensaverWindow.loadURL(getScreensaverURL());
+function getConfiguredScreensaverDisplays() {
+  const allDisplays = screen.getAllDisplays();
+  if (!allDisplays.length) return [];
 
-  let blurListenerEnabled = false;
+  const useAllDisplays = store ? store.get('screensaverUseAllDisplays', true) : true;
+  if (useAllDisplays) return allDisplays;
 
-  screensaverWindow.once('ready-to-show', () => {
-    screensaverWindow.show();
-    screensaverWindow.focus();
-    screensaverWindow.webContents.send('screensaver-activate');
-    
-    // Prevent immediate dismissal caused by focus changes from launching the app
-    setTimeout(() => {
-      blurListenerEnabled = true;
-    }, 500);
-  });
+  const rawIds = store ? store.get('screensaverDisplayIds', []) : [];
+  const selectedIds = new Set((Array.isArray(rawIds) ? rawIds : []).map((id) => Number(id)));
+  const selected = allDisplays.filter((display) => selectedIds.has(Number(display.id)));
 
-  // Dismiss on any significant mouse movement or keypress within the window (handled in renderer)
-  // or when the window loses focus entirely (e.g. user hits Alt+Tab)
-  screensaverWindow.on('blur', () => {
-    if (blurListenerEnabled) {
-      dismissScreensaver();
-    }
-  });
+  return selected.length > 0 ? selected : [screen.getPrimaryDisplay()];
+}
 
-  screensaverWindow.on('closed', () => {
-    screensaverWindow = null;
-  });
+function cleanupScreensaverWindows() {
+  screensaverWindows = screensaverWindows.filter((win) => win && !win.isDestroyed());
+}
+
+function hideScreensaverWindows() {
+  cleanupScreensaverWindows();
+  for (const win of screensaverWindows) {
+    win.hide();
+  }
+}
+
+function closeScreensaverWindows() {
+  cleanupScreensaverWindows();
+  for (const win of screensaverWindows) {
+    win.removeAllListeners('closed');
+    win.close();
+  }
+  screensaverWindows = [];
+}
+
+function createScreensaverWindow() {
+  const targetDisplays = getConfiguredScreensaverDisplays();
+  if (!targetDisplays.length) return;
+
+  closeScreensaverWindows();
+
+  const primaryDisplayId = screen.getPrimaryDisplay()?.id;
+
+  for (const display of targetDisplays) {
+    const win = new BrowserWindow({
+      x: display.bounds.x,
+      y: display.bounds.y,
+      width: display.bounds.width,
+      height: display.bounds.height,
+      fullscreen: true,
+      frame: false,
+      alwaysOnTop: true,
+      transparent: false,
+      backgroundColor: '#000000',
+      show: false,
+      skipTaskbar: true,
+      webPreferences: {
+        preload: path.join(__dirname, '..', 'preload', 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false,
+        webSecurity: false, // Allow loading local file:// URIs for user slide backgrounds
+      },
+    });
+
+    win.__displayId = Number(display.id);
+    win.loadURL(getScreensaverURL());
+
+    let blurListenerEnabled = false;
+    win.once('ready-to-show', () => {
+      if (win.isDestroyed()) return;
+      win.show();
+      if (win.__displayId === Number(primaryDisplayId)) {
+        win.focus();
+      }
+      win.webContents.send('screensaver-activate');
+
+      setTimeout(() => {
+        blurListenerEnabled = true;
+      }, 500);
+    });
+
+    win.on('blur', () => {
+      if (!blurListenerEnabled) return;
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      const focusedIsScreensaver = focusedWindow && screensaverWindows.includes(focusedWindow);
+      if (!focusedIsScreensaver) {
+        dismissScreensaver();
+      }
+    });
+
+    win.on('closed', () => {
+      cleanupScreensaverWindows();
+    });
+
+    screensaverWindows.push(win);
+  }
 }
 
 function dismissScreensaver() {
-  if (screensaverWindow && !screensaverWindow.isDestroyed()) {
-    screensaverWindow.hide();
-  }
+  hideScreensaverWindows();
 }
 
 // ── Settings Window ───────────────────────────────────────────────────
@@ -204,6 +286,60 @@ function createSettingsWindow() {
   settingsWindow.on('closed', () => {
     settingsWindow = null;
   });
+}
+
+// ── Phase 5.1: Layout Editor Window ──────────────────────────────────────
+
+function createLayoutEditorWindow() {
+  if (layoutEditorWindow && !layoutEditorWindow.isDestroyed()) {
+    layoutEditorWindow.focus();
+    return;
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+
+  layoutEditorWindow = new BrowserWindow({
+    width,
+    height,
+    title: 'AuraBoard Layout Editor',
+    titleBarStyle: 'hidden',
+    backgroundColor: '#02050a',
+    show: false,
+    frame: false,
+    fullscreen: true,
+    webPreferences: {
+      preload: path.join(__dirname, '..', 'preload', 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      webSecurity: false,
+    },
+  });
+
+  if (isDev) {
+    layoutEditorWindow.loadURL('http://localhost:5173/layout.html');
+  } else {
+    layoutEditorWindow.loadURL(`file://${path.join(__dirname, '..', 'renderer', 'layout.html')}`);
+  }
+
+  layoutEditorWindow.once('ready-to-show', () => {
+    layoutEditorWindow.show();
+  });
+
+  layoutEditorWindow.on('closed', () => {
+    layoutEditorWindow = null;
+    // Tell Settings window to reload or refresh if open, so changes are reflected
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('layout-editor-closed');
+    }
+  });
+}
+
+function notifyDisplaysChanged() {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.webContents.send('displays-changed', getAvailableDisplays());
+  }
 }
 
 // ── System Tray ───────────────────────────────────────────────────────
@@ -271,7 +407,8 @@ function startIdleDetection() {
 
     if (idleTime >= idleThresholdSeconds) {
       // Only show if not already visible
-      if (!screensaverWindow || screensaverWindow.isDestroyed() || !screensaverWindow.isVisible()) {
+      const hasVisibleScreensaver = screensaverWindows.some((win) => !win.isDestroyed() && win.isVisible());
+      if (!hasVisibleScreensaver) {
         createScreensaverWindow();
       }
     }
@@ -295,7 +432,17 @@ function setupIPC() {
       slideshowTransition: store ? store.get('slideshowTransition', 'fade') : 'fade',
       slideshowShuffle: store ? store.get('slideshowShuffle', false) : false,
       spotifyPollInterval: store ? store.get('spotifyPollInterval', 3) : 3,
+      uiTheme: store ? store.get('uiTheme', 'aurora') : 'aurora',
+      uiFont: store ? store.get('uiFont', 'outfit') : 'outfit',
+      screensaverUseAllDisplays: store ? store.get('screensaverUseAllDisplays', true) : true,
+      screensaverDisplayIds: store ? store.get('screensaverDisplayIds', []) : [],
       useSpotifyArtBackground: store ? store.get('useSpotifyArtBackground', false) : false,
+      // Phase 5
+      gnewsApiKey: store ? store.get('gnewsApiKey', '') : '',
+      alphaVantageApiKey: store ? store.get('alphaVantageApiKey', '') : '',
+      stockSymbols: store ? store.get('stockSymbols', 'AAPL,MSFT,GOOGL,AMZN,TSLA') : 'AAPL,MSFT,GOOGL,AMZN,TSLA',
+      cryptoCoinIds: store ? store.get('cryptoCoinIds', 'bitcoin,ethereum,solana,binancecoin,cardano') : 'bitcoin,ethereum,solana,binancecoin,cardano',
+      sportsLeagues: store ? store.get('sportsLeagues', '4387,4328') : '4387,4328',
     };
   });
 
@@ -325,14 +472,59 @@ function setupIPC() {
       const interval = Math.max(1, Math.min(10, Number(data.spotifyPollInterval)));
       store.set('spotifyPollInterval', interval);
     }
+    if (data.uiTheme !== undefined) {
+      store.set('uiTheme', String(data.uiTheme));
+    }
+    if (data.uiFont !== undefined) {
+      store.set('uiFont', String(data.uiFont));
+    }
+    if (data.screensaverUseAllDisplays !== undefined) {
+      store.set('screensaverUseAllDisplays', Boolean(data.screensaverUseAllDisplays));
+    }
+    if (data.screensaverDisplayIds !== undefined) {
+      const displayIds = Array.isArray(data.screensaverDisplayIds)
+        ? data.screensaverDisplayIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id))
+        : [];
+      store.set('screensaverDisplayIds', displayIds);
+    }
     if (data.useSpotifyArtBackground !== undefined) {
       store.set('useSpotifyArtBackground', Boolean(data.useSpotifyArtBackground));
+    }
+    // Phase 5 settings
+    if (data.gnewsApiKey !== undefined) {
+      store.set('gnewsApiKey', String(data.gnewsApiKey));
+    }
+    if (data.alphaVantageApiKey !== undefined) {
+      store.set('alphaVantageApiKey', String(data.alphaVantageApiKey));
+    }
+    if (data.stockSymbols !== undefined) {
+      store.set('stockSymbols', String(data.stockSymbols));
+    }
+    if (data.cryptoCoinIds !== undefined) {
+      store.set('cryptoCoinIds', String(data.cryptoCoinIds));
+    }
+    if (data.sportsLeagues !== undefined) {
+      store.set('sportsLeagues', String(data.sportsLeagues));
     }
     return { success: true };
   });
 
   ipcMain.on('open-settings', () => {
     createSettingsWindow();
+  });
+
+  ipcMain.handle('open-settings', () => {
+    createSettingsWindow();
+  });
+
+  ipcMain.handle('open-layout-editor', () => {
+    createLayoutEditorWindow();
+  });
+
+  ipcMain.handle('get-displays', async () => {
+    return getAvailableDisplays();
   });
 
   ipcMain.on('start-screensaver', () => {
@@ -434,6 +626,66 @@ function setupIPC() {
     try { return await getSpotifyUsername(); }
     catch { return null; }
   });
+
+  // ── Phase 5: Widget layout & data IPC handlers ─────────────────────────
+
+  ipcMain.handle('get-widget-layout', async () => {
+    return store ? store.get('widgetLayout', null) : null;
+  });
+
+  ipcMain.handle('save-widget-layout', async (_event, layout) => {
+    if (store && Array.isArray(layout)) {
+      store.set('widgetLayout', layout);
+    }
+    return { success: true };
+  });
+
+  ipcMain.handle('get-enabled-widgets', async () => {
+    return store
+      ? store.get('enabledWidgets', ['clock', 'date', 'greeting', 'weather', 'spotify'])
+      : ['clock', 'date', 'greeting', 'weather', 'spotify'];
+  });
+
+  ipcMain.handle('save-enabled-widgets', async (_event, list) => {
+    if (store && Array.isArray(list)) {
+      store.set('enabledWidgets', list);
+    }
+    return { success: true };
+  });
+
+  ipcMain.handle('reset-widget-layout', async () => {
+    if (store) {
+      store.set('widgetLayout', null);
+    }
+    return { success: true };
+  });
+
+  // RSS feed parser — runs in main process (Node module)
+  ipcMain.handle('fetch-rss', async (_event, url) => {
+    try {
+      const feed = await rssParser.parseURL(url);
+      return feed.items || [];
+    } catch (err) {
+      console.error('RSS parse error:', err);
+      return [];
+    }
+  });
+
+  // yahoo-finance2 stock quote — runs in main process (Node module)
+  ipcMain.handle('fetch-stock-quote', async (_event, symbol) => {
+    try {
+      // Handle CommonJS vs ESM import mismatch based on yahoo-finance2 version
+      const quoteFn = yahooFinance.quote || (yahooFinance.default && yahooFinance.default.quote);
+      if (typeof quoteFn !== 'function') {
+        throw new Error('yahooFinance.quote is not a function');
+      }
+      const quote = await quoteFn(symbol);
+      return quote || null;
+    } catch (err) {
+      console.error('Yahoo Finance error:', err.message || err);
+      return null;
+    }
+  });
 }
 
 // ── Command-line argument handling for .scr registration ──────────────
@@ -476,6 +728,10 @@ app.whenReady().then(async () => {
   createTray();
   startIdleDetection();
 
+  screen.on('display-added', notifyDisplaysChanged);
+  screen.on('display-removed', notifyDisplaysChanged);
+  screen.on('display-metrics-changed', notifyDisplaysChanged);
+
   // If no .scr argument was provided, just start minimized to tray
   if (!scrMode) {
     if (isDev) {
@@ -493,7 +749,9 @@ app.on('before-quit', () => {
 });
 
 app.on('activate', () => {
-  if (!settingsWindow && !screensaverWindow) {
+  cleanupScreensaverWindows();
+  const hasVisibleScreensaver = screensaverWindows.some((win) => !win.isDestroyed() && win.isVisible());
+  if (!settingsWindow && !hasVisibleScreensaver) {
     createSettingsWindow();
   }
 });

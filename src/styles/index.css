@@ -1,0 +1,28 @@
+/**
+ * AuraBoard global stylesheet — the single styling entry for all three renderer
+ * windows (screensaver, settings, layout editor).
+ *
+ * Fonts are bundled rather than fetched: AuraBoard activates when the machine
+ * has gone idle, which is exactly when the network may be absent.
+ */
+
+@import '@fontsource-variable/outfit';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  /* Used by the settings scroll container. Previously referenced a plugin that
+     was never installed, so it silently did nothing. */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

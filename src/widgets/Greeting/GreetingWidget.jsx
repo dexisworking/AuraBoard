@@ -39,8 +39,8 @@ export default function GreetingWidget({ userName = '' }) {
 
   return (
     <div 
-      className={`transition-opacity duration-1000 ease-in-out ${fadeState}`}
-      style={{ fontFamily: "'Outfit', sans-serif" }}
+      className={`w-full h-full flex flex-col justify-center transition-opacity duration-1000 ease-in-out ${fadeState}`}
+      style={{ fontFamily: 'inherit' }}
     >
       <h2 className="text-6xl font-extralight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)] tracking-wide">
         {greeting}

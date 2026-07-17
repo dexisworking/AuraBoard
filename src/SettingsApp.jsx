@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import SlideshowBackground from './slideshow/SlideshowBackground';
+import { getAllWidgets } from './widgets/registry';
+import { FONT_PRESETS, THEME_PRESETS } from './theme/presets';
 
 function formatInterval(seconds) {
   if (seconds < 60) {
@@ -15,6 +17,54 @@ function formatInterval(seconds) {
 
   return `${minutes} min ${remainingSeconds} sec`;
 }
+
+/* ── Toggle Switch component ── */
+function ToggleSwitch({ checked, onChange, label, description }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-white">{label}</p>
+        {description && <p className="text-xs text-white/50">{description}</p>}
+      </div>
+      <label className="relative inline-flex items-center cursor-pointer">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500 shadow-inner"></div>
+      </label>
+    </div>
+  );
+}
+
+/* ── Layout preset definitions ── */
+const PRESETS = {
+  full: {
+    label: 'Full Board',
+    description: 'All widgets visible',
+    widgets: ['clock', 'date', 'greeting', 'weather', 'spotify', 'news', 'crypto', 'stocks', 'sports'],
+  },
+  minimal: {
+    label: 'Minimal Clock',
+    description: 'Clock + Date + Greeting',
+    widgets: ['clock', 'date', 'greeting'],
+  },
+  focus: {
+    label: 'Focus Mode',
+    description: 'Clock + Greeting + Weather',
+    widgets: ['clock', 'greeting', 'weather'],
+  },
+};
+
+/* ── Sports league definitions ── */
+const LEAGUE_OPTIONS = [
+  { id: '4387', name: 'NBA' },
+  { id: '4391', name: 'NFL' },
+  { id: '4328', name: 'EPL' },
+  { id: '4335', name: 'LaLiga' },
+];
 
 export default function SettingsApp() {
   const [idleTimeout, setIdleTimeout] = useState(5);
@@ -33,15 +83,34 @@ export default function SettingsApp() {
   const [spotifyUsername, setSpotifyUsername] = useState('');
   const [spotifyConnecting, setSpotifyConnecting] = useState(false);
   const [spotifyPollInterval, setSpotifyPollInterval] = useState(3);
+  const [uiTheme, setUiTheme] = useState('aurora');
+  const [uiFont, setUiFont] = useState('outfit');
+
+  // Phase 5 state
+  const [enabledWidgets, setEnabledWidgets] = useState([
+    'clock', 'date', 'greeting', 'weather', 'spotify',
+  ]);
+  const [gnewsApiKey, setGnewsApiKey] = useState('');
+  const [alphaVantageApiKey, setAlphaVantageApiKey] = useState('');
+  const [stockSymbols, setStockSymbols] = useState('AAPL,MSFT,GOOGL,AMZN,TSLA');
+  const [cryptoCoinIds, setCryptoCoinIds] = useState('bitcoin,ethereum,solana,binancecoin,cardano');
+  const [sportsLeagues, setSportsLeagues] = useState('4387,4328');
+  const [availableDisplays, setAvailableDisplays] = useState([]);
+  const [screensaverUseAllDisplays, setScreensaverUseAllDisplays] = useState(true);
+  const [screensaverDisplayIds, setScreensaverDisplayIds] = useState([]);
+
+  const allWidgets = useMemo(() => getAllWidgets(), []);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadSettings() {
       try {
-        const [settings, folderImages] = await Promise.all([
+        const [settings, folderImages, savedWidgets, displays] = await Promise.all([
           window.electronAPI?.getSettings?.() ?? Promise.resolve({}),
           window.electronAPI?.getFolderImages?.() ?? Promise.resolve([]),
+          window.electronAPI?.getEnabledWidgets?.() ?? Promise.resolve(null),
+          window.electronAPI?.getDisplays?.() ?? Promise.resolve([]),
         ]);
 
         if (!isMounted) {
@@ -55,7 +124,27 @@ export default function SettingsApp() {
         setSlideshowShuffle(Boolean(settings.slideshowShuffle));
         setUseSpotifyArtBackground(Boolean(settings.useSpotifyArtBackground));
         setSpotifyPollInterval(settings.spotifyPollInterval ?? 3);
+        setUiTheme(settings.uiTheme ?? 'aurora');
+        setUiFont(settings.uiFont ?? 'outfit');
         setImages(Array.isArray(folderImages) ? folderImages : []);
+
+        // Phase 5 settings
+        setGnewsApiKey(settings.gnewsApiKey ?? '');
+        setAlphaVantageApiKey(settings.alphaVantageApiKey ?? '');
+        setStockSymbols(settings.stockSymbols ?? 'AAPL,MSFT,GOOGL,AMZN,TSLA');
+        setCryptoCoinIds(settings.cryptoCoinIds ?? 'bitcoin,ethereum,solana,binancecoin,cardano');
+        setSportsLeagues(settings.sportsLeagues ?? '4387,4328');
+        setScreensaverUseAllDisplays(settings.screensaverUseAllDisplays ?? true);
+        setScreensaverDisplayIds(
+          Array.isArray(settings.screensaverDisplayIds)
+            ? settings.screensaverDisplayIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+            : []
+        );
+        setAvailableDisplays(Array.isArray(displays) ? displays : []);
+
+        if (Array.isArray(savedWidgets) && savedWidgets.length > 0) {
+          setEnabledWidgets(savedWidgets);
+        }
 
         // Load Spotify auth state
         if (window.electronAPI?.spotify) {
@@ -73,8 +162,32 @@ export default function SettingsApp() {
 
     loadSettings();
 
+    // Listen for layout editor closing to refresh enabled widgets
+    let cleanup = null;
+    let displayCleanup = null;
+    if (window.electronAPI?.onLayoutEditorClosed) {
+      cleanup = window.electronAPI.onLayoutEditorClosed(() => {
+        if (isMounted) loadSettings();
+      });
+    }
+
+    if (window.electronAPI?.onDisplaysChanged) {
+      displayCleanup = window.electronAPI.onDisplaysChanged((displays) => {
+        if (!isMounted) return;
+        const nextDisplays = Array.isArray(displays) ? displays : [];
+        setAvailableDisplays(nextDisplays);
+        setScreensaverDisplayIds((prev) => {
+          const validIds = new Set(nextDisplays.map((d) => Number(d.id)));
+          const filtered = prev.filter((id) => validIds.has(Number(id)));
+          return filtered;
+        });
+      });
+    }
+
     return () => {
       isMounted = false;
+      if (cleanup) cleanup();
+      if (displayCleanup) displayCleanup();
     };
   }, []);
 
@@ -129,6 +242,15 @@ export default function SettingsApp() {
         return;
       }
 
+      const primaryDisplay = availableDisplays.find((display) => display.primary);
+      const fallbackDisplayIds = primaryDisplay ? [Number(primaryDisplay.id)] : [];
+      const selectedDisplayIds = screensaverDisplayIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id));
+      const displayIdsToSave = screensaverUseAllDisplays
+        ? []
+        : (selectedDisplayIds.length > 0 ? selectedDisplayIds : fallbackDisplayIds);
+
       await window.electronAPI.saveSettings({
         idleTimeout: Number(idleTimeout),
         slideshowInterval: Number(slideshowInterval),
@@ -136,7 +258,21 @@ export default function SettingsApp() {
         slideshowShuffle,
         useSpotifyArtBackground,
         spotifyPollInterval: Number(spotifyPollInterval),
+        uiTheme,
+        uiFont,
+        screensaverUseAllDisplays,
+        screensaverDisplayIds: displayIdsToSave,
+        // Phase 5
+        gnewsApiKey,
+        alphaVantageApiKey,
+        stockSymbols,
+        cryptoCoinIds,
+        sportsLeagues,
       });
+
+      // Save enabled widgets separately
+      await window.electronAPI?.saveEnabledWidgets?.(enabledWidgets);
+
       setSaveMessage('Settings saved!');
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -152,8 +288,76 @@ export default function SettingsApp() {
     setIsPreviewing(true);
   };
 
+  const handleToggleWidget = (widgetId, enabled) => {
+    setEnabledWidgets((prev) => {
+      if (enabled) {
+        return prev.includes(widgetId) ? prev : [...prev, widgetId];
+      }
+      return prev.filter((id) => id !== widgetId);
+    });
+  };
+
+  const handleApplyPreset = (presetKey) => {
+    const preset = PRESETS[presetKey];
+    if (preset) {
+      setEnabledWidgets(preset.widgets);
+    }
+  };
+
+  const handleResetLayout = async () => {
+    await window.electronAPI?.resetWidgetLayout?.();
+    setSaveMessage('Layout reset to default!');
+    window.setTimeout(() => setSaveMessage(''), 3000);
+  };
+
+  const handleEditLayout = () => {
+    // Open the new dedicated layout editor window
+    if (window.electronAPI?.openLayoutEditor) {
+      window.electronAPI.openLayoutEditor();
+    } else {
+      setSaveMessage('Layout Editor API missing');
+      window.setTimeout(() => setSaveMessage(''), 3000);
+    }
+  };
+
+  const handleSportsLeagueToggle = (leagueId, checked) => {
+    const currentLeagues = sportsLeagues.split(',').filter(Boolean);
+    let updated;
+    if (checked) {
+      updated = [...new Set([...currentLeagues, leagueId])];
+    } else {
+      updated = currentLeagues.filter((id) => id !== leagueId);
+    }
+    setSportsLeagues(updated.join(','));
+  };
+
+  const handleDisplayToggle = (displayId, checked) => {
+    setScreensaverDisplayIds((prev) => {
+      if (checked) {
+        return prev.includes(displayId) ? prev : [...prev, displayId];
+      }
+      return prev.filter((id) => id !== displayId);
+    });
+  };
+
+  const handleUseAllDisplaysToggle = (checked) => {
+    setScreensaverUseAllDisplays(checked);
+    if (!checked && screensaverDisplayIds.length === 0) {
+      const primaryDisplay = availableDisplays.find((display) => display.primary);
+      if (primaryDisplay) {
+        setScreensaverDisplayIds([Number(primaryDisplay.id)]);
+      }
+    }
+  };
+
+  const activeThemePreset = THEME_PRESETS[uiTheme] || THEME_PRESETS.aurora;
+  const activeFontPreset = FONT_PRESETS[uiFont] || FONT_PRESETS.outfit;
+
   return (
-    <div className="min-h-screen bg-slate-900 text-white font-sans relative overflow-hidden select-none">
+    <div
+      className="min-h-screen bg-slate-900 text-white font-sans relative overflow-hidden select-none"
+      style={{ fontFamily: activeFontPreset.stack }}
+    >
       {/* Animated Mesh Gradient Background for Glass Effect */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/40 rounded-full blur-[120px] mix-blend-screen animate-pulse" />
@@ -163,7 +367,7 @@ export default function SettingsApp() {
 
       <div className="relative z-10 flex flex-col h-screen">
         {/* Draggable Titlebar Area */}
-        <div 
+        <div
           className="h-12 w-full flex items-center justify-center shrink-0"
           style={{ WebkitAppRegion: 'drag' }}
         >
@@ -172,7 +376,7 @@ export default function SettingsApp() {
 
         <div className="flex-1 overflow-y-auto px-8 pb-12 pt-4 scrollbar-hide">
           <div className="mx-auto w-full max-w-3xl space-y-8">
-            
+
             <div className="text-center mb-10">
               <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">Settings</h1>
               <p className="text-base text-white/60">Customize your screensaver experience</p>
@@ -204,6 +408,157 @@ export default function SettingsApp() {
                   />
                   <span className="w-12 text-right text-sm font-medium text-white/90">{idleTimeout}m</span>
                 </div>
+              </div>
+
+              <div className="mt-8 space-y-4">
+                <ToggleSwitch
+                  checked={screensaverUseAllDisplays}
+                  onChange={handleUseAllDisplaysToggle}
+                  label="Run on all displays"
+                  description="Disable to target specific monitors."
+                />
+
+                {!screensaverUseAllDisplays && (
+                  <div className="rounded-2xl bg-black/20 border border-white/10 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+                      Target Displays
+                    </p>
+                    {availableDisplays.length === 0 && (
+                      <p className="text-sm text-white/60">No displays detected.</p>
+                    )}
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {availableDisplays.map((display) => (
+                        <label
+                          key={display.id}
+                          className="flex items-center gap-3 rounded-xl bg-black/30 px-4 py-3 border border-white/10 cursor-pointer transition-all hover:bg-white/5"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={screensaverDisplayIds.includes(Number(display.id))}
+                            onChange={(e) => handleDisplayToggle(Number(display.id), e.target.checked)}
+                            className="w-4 h-4 accent-indigo-500 rounded"
+                          />
+                          <span className="text-sm text-white/90">{display.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Appearance Section */}
+            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-white">Appearance</h2>
+                <p className="mt-1 text-sm text-white/60">Choose theme colors and typography for widgets.</p>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Theme</label>
+                  <select
+                    value={uiTheme}
+                    onChange={(e) => setUiTheme(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow appearance-none cursor-pointer"
+                  >
+                    {Object.values(THEME_PRESETS).map((theme) => (
+                      <option key={theme.id} value={theme.id}>
+                        {theme.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Font</label>
+                  <select
+                    value={uiFont}
+                    onChange={(e) => setUiFont(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow appearance-none cursor-pointer"
+                  >
+                    {Object.values(FONT_PRESETS).map((font) => (
+                      <option key={font.id} value={font.id}>
+                        {font.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div
+                className="mt-6 rounded-2xl border p-5"
+                style={{
+                  background: activeThemePreset.widgetSurface,
+                  borderColor: activeThemePreset.widgetBorder,
+                }}
+              >
+                <p className="text-xs uppercase tracking-widest text-white/50 mb-2">Live Preview</p>
+                <p
+                  className="text-lg text-white"
+                  style={{ fontFamily: activeFontPreset.stack }}
+                >
+                  The quick brown fox jumps over the lazy dog.
+                </p>
+                <p className="text-xs mt-2" style={{ color: activeThemePreset.accent }}>
+                  Accent color preview
+                </p>
+              </div>
+            </section>
+
+            {/* Widgets Section — Phase 5 */}
+            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-white">Widgets</h2>
+                <p className="mt-1 text-sm text-white/60">Toggle which widgets appear on the screensaver.</p>
+              </div>
+
+              <div className="space-y-3">
+                {allWidgets.map((w) => (
+                  <ToggleSwitch
+                    key={w.id}
+                    checked={enabledWidgets.includes(w.id)}
+                    onChange={(checked) => handleToggleWidget(w.id, checked)}
+                    label={w.name}
+                    description={w.description}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {/* Layout Presets & Edit — Phase 5 */}
+            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-white">Layout Presets</h2>
+                <p className="mt-1 text-sm text-white/60">Quick widget presets or customize your layout.</p>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-4 mb-6">
+                {Object.entries(PRESETS).map(([key, preset]) => (
+                  <button
+                    key={key}
+                    onClick={() => handleApplyPreset(key)}
+                    className="rounded-2xl bg-black/20 p-4 border border-white/5 text-left transition-all hover:bg-white/10 hover:border-white/20 active:scale-95"
+                  >
+                    <p className="text-sm font-semibold text-white mb-1">{preset.label}</p>
+                    <p className="text-xs text-white/50">{preset.description}</p>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleEditLayout}
+                  className="flex-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 px-5 py-2.5 text-sm font-semibold text-indigo-200 transition-all hover:bg-indigo-500/30"
+                >
+                  ✏️ Edit Layout
+                </button>
+                <button
+                  onClick={handleResetLayout}
+                  className="flex-1 rounded-full bg-white/10 border border-white/20 px-5 py-2.5 text-sm font-semibold text-white/80 transition-all hover:bg-white/20"
+                >
+                  ↺ Reset Layout
+                </button>
               </div>
             </section>
 
@@ -265,7 +620,7 @@ export default function SettingsApp() {
                       className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow appearance-none cursor-pointer"
                     >
                       <option value="fade">Crossfade Effect</option>
-                      <option value="zoom">Slow Zoom & Fade</option>
+                      <option value="zoom">Slow Zoom &amp; Fade</option>
                       <option value="slide">Smooth Slide</option>
                     </select>
                   </div>
@@ -275,39 +630,18 @@ export default function SettingsApp() {
 
                 {/* Toggles */}
                 <div className="space-y-4">
-                  {/* Shuffle Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-white">Shuffle Images</p>
-                      <p className="text-xs text-white/50">Randomize slide order.</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={slideshowShuffle}
-                        onChange={(e) => setSlideshowShuffle(e.target.checked)}
-                      />
-                      <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500 shadow-inner"></div>
-                    </label>
-                  </div>
-
-                  {/* Spotify Background Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-white">Use Spotify Album Art</p>
-                      <p className="text-xs text-white/50">Replace slideshow with current track's album art.</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={useSpotifyArtBackground}
-                        onChange={(e) => setUseSpotifyArtBackground(e.target.checked)}
-                      />
-                      <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500 shadow-inner"></div>
-                    </label>
-                  </div>
+                  <ToggleSwitch
+                    checked={slideshowShuffle}
+                    onChange={setSlideshowShuffle}
+                    label="Shuffle Images"
+                    description="Randomize slide order."
+                  />
+                  <ToggleSwitch
+                    checked={useSpotifyArtBackground}
+                    onChange={setUseSpotifyArtBackground}
+                    label="Use Spotify Album Art"
+                    description="Replace slideshow with current track's album art."
+                  />
                 </div>
 
                 <div className="flex justify-end pt-2">
@@ -394,9 +728,96 @@ export default function SettingsApp() {
               )}
             </section>
 
+            {/* API Keys & Data Section — Phase 5 */}
+            <section className="rounded-[2.5rem] border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl transition-transform hover:scale-[1.01] duration-500">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-white">API Keys &amp; Data</h2>
+                <p className="mt-1 text-sm text-white/60">Configure data sources for your widgets.</p>
+              </div>
+
+              <div className="space-y-6">
+                {/* GNews API Key */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">GNews API Key</label>
+                  <p className="text-xs text-white/50 mb-2">For the News widget. Falls back to BBC RSS if empty.</p>
+                  <input
+                    type="text"
+                    value={gnewsApiKey}
+                    onChange={(e) => setGnewsApiKey(e.target.value)}
+                    placeholder="Enter your GNews API key"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow placeholder:text-white/25"
+                  />
+                </div>
+
+                {/* Alpha Vantage API Key */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Alpha Vantage API Key</label>
+                  <p className="text-xs text-white/50 mb-2">For the Stocks widget. Falls back to Yahoo Finance if empty.</p>
+                  <input
+                    type="text"
+                    value={alphaVantageApiKey}
+                    onChange={(e) => setAlphaVantageApiKey(e.target.value)}
+                    placeholder="Enter your Alpha Vantage API key"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow placeholder:text-white/25"
+                  />
+                </div>
+
+                <hr className="border-white/10" />
+
+                {/* Stock Symbols */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Stock Symbols</label>
+                  <p className="text-xs text-white/50 mb-2">Comma-separated. Max 5 symbols.</p>
+                  <input
+                    type="text"
+                    value={stockSymbols}
+                    onChange={(e) => setStockSymbols(e.target.value)}
+                    placeholder="AAPL,MSFT,GOOGL,AMZN,TSLA"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow placeholder:text-white/25 font-mono"
+                  />
+                </div>
+
+                {/* Crypto Coin IDs */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Crypto Coin IDs</label>
+                  <p className="text-xs text-white/50 mb-2">CoinGecko coin IDs, comma-separated.</p>
+                  <input
+                    type="text"
+                    value={cryptoCoinIds}
+                    onChange={(e) => setCryptoCoinIds(e.target.value)}
+                    placeholder="bitcoin,ethereum,solana,binancecoin,cardano"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-white/30 transition-shadow placeholder:text-white/25 font-mono"
+                  />
+                </div>
+
+                <hr className="border-white/10" />
+
+                {/* Sports Leagues */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Sports Leagues</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {LEAGUE_OPTIONS.map((league) => (
+                      <label
+                        key={league.id}
+                        className="flex items-center gap-3 rounded-xl bg-black/20 px-4 py-3 border border-white/5 cursor-pointer transition-all hover:bg-white/5"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={sportsLeagues.split(',').includes(league.id)}
+                          onChange={(e) => handleSportsLeagueToggle(league.id, e.target.checked)}
+                          className="w-4 h-4 accent-indigo-500 rounded"
+                        />
+                        <span className="text-sm font-medium text-white">{league.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
             {/* Bottom Actions */}
             <div className="flex items-center justify-between p-2">
-              <p className={`text-sm font-medium transition-opacity duration-300 ${saveMessage ? 'opacity-100' : 'opacity-0'} ${saveMessage.includes('saved') || saveMessage.includes('selected') ? 'text-green-400' : 'text-amber-400'}`}>
+              <p className={`text-sm font-medium transition-opacity duration-300 ${saveMessage ? 'opacity-100' : 'opacity-0'} ${saveMessage.includes('saved') || saveMessage.includes('selected') || saveMessage.includes('reset') ? 'text-green-400' : 'text-amber-400'}`}>
                 {saveMessage || ' '}
               </p>
               <div className="flex items-center gap-4">
@@ -418,7 +839,7 @@ export default function SettingsApp() {
                 </button>
               </div>
             </div>
-            
+
           </div>
         </div>
       </div>

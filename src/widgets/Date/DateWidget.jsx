@@ -46,7 +46,7 @@ export default function DateWidget({ timeZone }) {
   });
 
   return (
-    <div className="flex items-center text-white/90 font-light drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className="w-full h-full flex items-center justify-center text-white/90 font-light drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'inherit' }}>
       <span className="text-3xl font-regular">{weekday}</span>
       <div className="mx-4 h-6 w-px bg-white/40 shadow-[0_0_8px_rgba(255,255,255,0.3)]"></div>
       <span className="text-2xl opacity-80">

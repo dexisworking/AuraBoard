@@ -89,7 +89,7 @@ export default function WeatherWidget({ city = '', useFahrenheit = false }) {
 
   if (loading && !data) {
     return (
-      <div className="flex flex-col gap-4 animate-pulse opacity-80" style={{ fontFamily: "'Outfit', sans-serif" }}>
+      <div className="flex flex-col gap-4 animate-pulse opacity-80" style={{ fontFamily: 'inherit' }}>
         <div className="h-16 w-48 bg-white/20 rounded-md"></div>
         <div className="h-8 w-64 bg-white/20 rounded-md"></div>
         <div className="flex gap-4">
@@ -103,7 +103,7 @@ export default function WeatherWidget({ city = '', useFahrenheit = false }) {
 
   if (error && !data) {
     return (
-      <div className="text-red-300 drop-shadow-md text-sm font-medium bg-black/40 p-3 rounded" style={{ fontFamily: "'Outfit', sans-serif" }}>
+      <div className="text-red-300 drop-shadow-md text-sm font-medium bg-black/40 p-3 rounded" style={{ fontFamily: 'inherit' }}>
         <span className="mr-2">⚠️</span>{error}
       </div>
     );
@@ -116,7 +116,7 @@ export default function WeatherWidget({ city = '', useFahrenheit = false }) {
   const tempUnit = useFahrenheit ? '°F' : '°C';
 
   return (
-    <div className="flex flex-col text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className="w-full h-full flex flex-col justify-center text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'inherit' }}>
       {/* Current Weather */}
       <div className="flex items-center gap-4 mb-2">
         <span className="text-7xl leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]">

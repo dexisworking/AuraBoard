@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuraBoard Layout Editor</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #02050a;
+        font-family: 'Outfit Variable', system-ui, sans-serif;
+        overflow: hidden;
+      }
+      /* Titlebar drag area */
+      .titlebar {
+        -webkit-app-region: drag;
+        height: 32px;
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 9999;
+      }
+      /* Prevent dragging on actual interactive elements if placed in/near titlebar */
+      .no-drag {
+        -webkit-app-region: no-drag;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Draggable region for the frameless window -->
+    <div class="titlebar"></div>
+    <!-- React Root -->
+    <div id="root"></div>
+    <script type="module" src="/src/layout.jsx"></script>
+  </body>
+</html>

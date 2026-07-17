@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import ClockWidget from './widgets/Clock/ClockWidget';
-import DateWidget from './widgets/Date/DateWidget';
-import GreetingWidget from './widgets/Greeting/GreetingWidget';
-import WeatherWidget from './widgets/Weather/WeatherWidget';
-import SpotifyWidget from './widgets/Spotify/SpotifyWidget';
 import SlideshowBackground from './slideshow/SlideshowBackground';
+import WidgetGrid from './layout/WidgetGrid';
+import { getFontPreset, getThemePreset } from './theme/presets';
 
 export default function App() {
   const [isActive, setIsActive] = useState(false);
@@ -15,6 +12,14 @@ export default function App() {
 
   const [spotifyTrack, setSpotifyTrack] = useState(null);
   const [useSpotifyArtBackground, setUseSpotifyArtBackground] = useState(false);
+  const [uiTheme, setUiTheme] = useState('aurora');
+  const [uiFont, setUiFont] = useState('outfit');
+
+  // Phase 5: edit mode + enabled widgets
+  const [editMode, setEditMode] = useState(false);
+  const [enabledWidgets, setEnabledWidgets] = useState([
+    'clock', 'date', 'greeting', 'weather', 'spotify',
+  ]);
 
   useEffect(() => {
     let cleanup = null;
@@ -23,7 +28,7 @@ export default function App() {
       cleanup = window.electronAPI.onScreensaverActivate(() => {
         setIsActive(true);
       });
-      
+
       // Also set active immediately in case we missed the event
       setIsActive(true);
     } else {
@@ -36,25 +41,31 @@ export default function App() {
     };
   }, []);
 
+  // Load slideshow settings + enabled widgets
   useEffect(() => {
     let isMounted = true;
 
     async function loadSlideshow() {
       try {
-        const [settings, folderImages] = await Promise.all([
+        const [settings, folderImages, savedWidgets] = await Promise.all([
           window.electronAPI?.getSettings?.() ?? Promise.resolve({}),
           window.electronAPI?.getFolderImages?.() ?? Promise.resolve([]),
+          window.electronAPI?.getEnabledWidgets?.() ?? Promise.resolve(null),
         ]);
 
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
         setSlideshowInterval(settings.slideshowInterval ?? 60);
         setSlideshowTransition(settings.slideshowTransition ?? 'fade');
         setSlideshowShuffle(Boolean(settings.slideshowShuffle));
         setImages(Array.isArray(folderImages) ? folderImages : []);
         setUseSpotifyArtBackground(Boolean(settings.useSpotifyArtBackground));
+        setUiTheme(settings.uiTheme ?? 'aurora');
+        setUiFont(settings.uiFont ?? 'outfit');
+
+        if (Array.isArray(savedWidgets) && savedWidgets.length > 0) {
+          setEnabledWidgets(savedWidgets);
+        }
       } catch (error) {
         console.error('Failed to load slideshow settings:', error);
       }
@@ -91,12 +102,21 @@ export default function App() {
     }
   };
 
+  // Handle removing a widget from the grid (edit mode)
+  const handleRemoveWidget = useCallback((widgetId) => {
+    setEnabledWidgets((prev) => {
+      const updated = prev.filter((id) => id !== widgetId);
+      window.electronAPI?.saveEnabledWidgets?.(updated);
+      return updated;
+    });
+  }, []);
+
+  // Keyboard handler: Alt+E for edit mode, dismiss on other keys
   useEffect(() => {
     let initialTouchY = null;
     let initialTouchX = null;
 
     const handleMouseMove = (e) => {
-      // Dismiss if mouse goes to the very top edge (e.g. top 10 pixels)
       if (e.clientY <= 10) {
         handleDismiss();
       }
@@ -111,22 +131,27 @@ export default function App() {
 
     const handleTouchMove = (e) => {
       if (initialTouchY === null || e.touches.length === 0) return;
-      
+
       const currentY = e.touches[0].clientY;
       const currentX = e.touches[0].clientX;
-      const dy = currentY - initialTouchY; // Positive means dragging down
+      const dy = currentY - initialTouchY;
       const dx = Math.abs(currentX - initialTouchX);
 
-      // Dismiss if drag started near the top (e.g. top 50px) 
-      // and was dragged down significantly (e.g. > 50px),
-      // and wasn't mostly a horizontal swipe
       if (initialTouchY <= 50 && dy > 50 && dy > dx) {
         handleDismiss();
       }
     };
 
-    const handleKeyDown = () => {
-      // Any keypress dismisses the screensaver
+    const handleKeyDown = (e) => {
+      // Alt+E toggles edit mode
+      if (e.altKey && (e.key === 'e' || e.key === 'E')) {
+        e.preventDefault();
+        setEditMode((prev) => !prev);
+        return;
+      }
+      // In edit mode, don't dismiss on keypress
+      if (editMode) return;
+      // Any other keypress dismisses the screensaver
       handleDismiss();
     };
 
@@ -141,11 +166,13 @@ export default function App() {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleDismiss]);
+  }, [handleDismiss, editMode]);
 
   const backgroundImages = (useSpotifyArtBackground && spotifyTrack?.albumArt)
     ? [spotifyTrack.albumArt]
     : images;
+  const themePreset = getThemePreset(uiTheme);
+  const fontPreset = getFontPreset(uiFont);
 
   return (
     <div
@@ -154,7 +181,17 @@ export default function App() {
         transition-opacity duration-1000 ease-in-out
         ${isActive ? 'opacity-100' : 'opacity-0'}
       `}
-      style={{ cursor: 'none', backgroundColor: '#02050a' }}
+      style={{
+        cursor: editMode ? 'default' : 'none',
+        backgroundColor: themePreset.background,
+        fontFamily: fontPreset.stack,
+        '--ab-font-family': fontPreset.stack,
+        '--ab-accent': themePreset.accent,
+        '--ab-widget-surface': themePreset.widgetSurface,
+        '--ab-widget-border': themePreset.widgetBorder,
+        '--ab-edit-surface': themePreset.editSurface,
+        '--ab-edit-border': themePreset.editBorder,
+      }}
     >
       <SlideshowBackground
         images={backgroundImages}
@@ -163,37 +200,14 @@ export default function App() {
         shuffle={slideshowShuffle}
       />
 
-      <div className="relative z-10 w-full h-full p-16">
-        <div className="absolute top-16 left-16 flex flex-col gap-4 z-10">
-          <div
-            className={`transition-all duration-1500 ease-out delay-300 transform ${isActive ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}
-          >
-            <GreetingWidget userName="Dex" />
-          </div>
-          <div
-            className={`transition-all duration-1500 ease-out delay-500 transform ${isActive ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}
-          >
-            <DateWidget />
-          </div>
-        </div>
-
-        <div
-          className={`absolute top-16 right-16 z-10 transition-all duration-1500 ease-out delay-100 transform ${isActive ? 'translate-y-0 opacity-100' : '-translate-y-8 opacity-0'}`}
-        >
-          <ClockWidget use24hr={false} />
-        </div>
-
-        <div
-          className={`absolute bottom-16 left-16 z-10 transition-all duration-1500 ease-out delay-700 transform ${isActive ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}
-        >
-          <WeatherWidget useFahrenheit={false} />
-        </div>
-
-        <div
-          className={`absolute bottom-16 right-16 z-10 transition-all duration-1500 ease-out delay-900 transform ${isActive ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}
-        >
-          <SpotifyWidget pollInterval={3} onTrackUpdate={setSpotifyTrack} />
-        </div>
+      <div className="relative z-10 w-full h-full">
+        <WidgetGrid
+          editMode={editMode}
+          enabledWidgets={enabledWidgets}
+          onRemoveWidget={handleRemoveWidget}
+          spotifyProps={{ onTrackUpdate: setSpotifyTrack }}
+          reloadTrigger={isActive ? 1 : 0}
+        />
 
         <button
           onClick={handleOpenSettings}

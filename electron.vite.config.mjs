@@ -13,10 +13,9 @@ export default defineConfig({
       lib: {
         entry: path.resolve(__dirname, 'electron/main.js'),
         formats: ['cjs'],
-        fileName: () => 'index.cjs',
       },
       rollupOptions: {
-        external: ['electron', 'electron-store', 'path', 'fs', 'url', 'node:path', 'node:fs', 'node:url', 'node:module', 'node:http', 'node:crypto'],
+        external: ['electron', 'electron-store', 'path', 'fs', 'url', 'node:path', 'node:fs', 'node:url', 'node:module', 'node:http', 'node:crypto', 'rss-parser', 'yahoo-finance2'],
       },
     },
   },
@@ -27,7 +26,6 @@ export default defineConfig({
       lib: {
         entry: path.resolve(__dirname, 'electron/preload.js'),
         formats: ['cjs'],
-        fileName: () => 'index.cjs',
       },
       rollupOptions: {
         external: ['electron'],
@@ -43,6 +41,7 @@ export default defineConfig({
         input: {
           screensaver: path.resolve(__dirname, 'index.html'),
           settings: path.resolve(__dirname, 'settings.html'),
+          layout: path.resolve(__dirname, 'layout.html'),
         },
       },
     },

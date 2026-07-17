@@ -84,4 +84,46 @@ contextBridge.exposeInMainWorld('electronAPI', {
     disconnect: () => ipcRenderer.invoke('spotify-disconnect'),
     getUsername: () => ipcRenderer.invoke('spotify-get-username'),
   },
+
+  // ── Phase 5: Widget system IPC ──
+
+  /** Open the dedicated Layout Editor window */
+  openLayoutEditor: () => ipcRenderer.invoke('open-layout-editor'),
+
+  /** Get currently available displays/monitors from Electron's screen API. */
+  getDisplays: () => ipcRenderer.invoke('get-displays'),
+
+  /** Event listener for display topology changes (add/remove/metrics). */
+  onDisplaysChanged: (callback) => {
+    const handler = (_event, displays) => callback(displays);
+    ipcRenderer.on('displays-changed', handler);
+    return () => ipcRenderer.removeListener('displays-changed', handler);
+  },
+
+  /** Event listener for when the layout editor is closed */
+  onLayoutEditorClosed: (callback) => {
+    ipcRenderer.on('layout-editor-closed', callback);
+    return () => ipcRenderer.removeListener('layout-editor-closed', callback);
+  },
+
+  /** Get saved widget layout from electron-store. */
+  getWidgetLayout: () => ipcRenderer.invoke('get-widget-layout'),
+
+  /** Save widget layout to electron-store. */
+  saveWidgetLayout: (layout) => ipcRenderer.invoke('save-widget-layout', layout),
+
+  /** Get list of enabled widget IDs. */
+  getEnabledWidgets: () => ipcRenderer.invoke('get-enabled-widgets'),
+
+  /** Save list of enabled widget IDs. */
+  saveEnabledWidgets: (list) => ipcRenderer.invoke('save-enabled-widgets', list),
+
+  /** Reset widget layout to default. */
+  resetWidgetLayout: () => ipcRenderer.invoke('reset-widget-layout'),
+
+  /** Parse an RSS feed URL in the main process and return items. */
+  fetchRss: (url) => ipcRenderer.invoke('fetch-rss', url),
+
+  /** Fetch a stock quote via yahoo-finance2 in the main process. */
+  fetchStockQuote: (symbol) => ipcRenderer.invoke('fetch-stock-quote', symbol),
 });
