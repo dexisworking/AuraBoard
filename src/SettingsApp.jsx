@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import SlideshowBackground from './slideshow/SlideshowBackground';
 import { getAllWidgets } from './widgets/registry';
 import { FONT_PRESETS, THEME_PRESETS } from './theme/presets';
+import { applyTheme } from './theme/applyTheme';
 
 function formatInterval(seconds) {
   if (seconds < 60) {
@@ -349,6 +350,12 @@ export default function SettingsApp() {
       }
     }
   };
+
+  // Keep :root tokens in sync so the settings chrome and live previews render
+  // in the theme being edited.
+  useEffect(() => {
+    applyTheme(uiTheme);
+  }, [uiTheme]);
 
   const activeThemePreset = THEME_PRESETS[uiTheme] || THEME_PRESETS.aurora;
   const activeFontPreset = FONT_PRESETS[uiFont] || FONT_PRESETS.outfit;

@@ -186,7 +186,7 @@ export default function SlideshowBackground({
           width: '100vw',
           height: '100vh',
           overflow: 'hidden',
-          backgroundColor: '#02050a',
+          backgroundColor: 'var(--ab-bg, #0A0A0A)',
           zIndex: 0,
         }}
       >
@@ -195,6 +195,11 @@ export default function SlideshowBackground({
             position: 'absolute',
             inset: 0,
             overflow: 'hidden',
+            // Swiss/Brutalist photo treatment: any user photo is driven to
+            // high-contrast monochrome so type and the signal colour always
+            // win. Applied to the container so both crossfading images and the
+            // Ken Burns transforms inherit it.
+            filter: 'var(--ab-photo-filter, none)',
           }}
         >
           <img
@@ -255,7 +260,10 @@ export default function SlideshowBackground({
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.12) 38%, rgba(0, 0, 0, 0) 100%)',
+            // Full-cover scrim (was a top-edge gradient): with the board now
+            // chromeless, text can sit anywhere, so the legibility floor must
+            // hold everywhere. Measured with photoFilter in the DS-1 gate.
+            background: 'var(--ab-scrim, rgba(0, 0, 0, 0.42))',
             pointerEvents: 'none',
           }}
         />

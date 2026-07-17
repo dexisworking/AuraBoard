@@ -1,0 +1,152 @@
+/**
+ * Shared widget primitives — Swiss/Brutalist.
+ * Replaces the near-identical root/header/skeleton/error blocks that each of
+ * the five data widgets used to restate with hardcoded colors.
+ * Everything reads --ab-* tokens; nothing here names a colour directly.
+ */
+
+.ab-widget-root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  color: var(--ab-ink);
+  font-family: var(--ab-font-ui);
+  overflow: hidden;
+}
+
+/* ── Header: micro-caption strip over a hairline, the Swiss signature ── */
+.ab-widget-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: var(--ab-rule-hairline) solid var(--ab-rule);
+  flex-shrink: 0;
+}
+
+.ab-widget-title {
+  font-family: var(--ab-font-micro);
+  font-size: var(--ab-text-micro);
+  font-weight: 600;
+  letter-spacing: var(--ab-track-micro);
+  text-transform: uppercase;
+  color: var(--ab-accent);
+}
+
+.ab-widget-meta {
+  font-family: var(--ab-font-micro);
+  font-size: var(--ab-text-micro);
+  font-weight: 600;
+  letter-spacing: var(--ab-track-label);
+  text-transform: uppercase;
+  color: var(--ab-ink-tertiary);
+  white-space: nowrap;
+}
+
+/* ── Skeleton: flat blocks, stepped blink — no gradient shimmer ── */
+@keyframes ab-skeleton-blink {
+  0%, 100% { opacity: 0.10; }
+  50% { opacity: 0.22; }
+}
+
+.ab-skeleton-block {
+  background: var(--ab-ink);
+  opacity: 0.10;
+  border-radius: var(--ab-radius);
+  animation: ab-skeleton-blink 1.6s steps(2, end) infinite;
+}
+
+.ab-skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+}
+
+.ab-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Error / empty state ── */
+.ab-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+}
+
+.ab-state-message {
+  font-family: var(--ab-font-micro);
+  font-size: var(--ab-text-micro);
+  font-weight: 600;
+  letter-spacing: var(--ab-track-label);
+  text-transform: uppercase;
+  line-height: 1.7;
+  color: var(--ab-ink-secondary);
+}
+
+.ab-state-message .ab-state-flag {
+  color: var(--ab-negative);
+}
+
+/* Brutal button: hairline box, square, inverts on hover */
+.ab-btn {
+  appearance: none;
+  background: transparent;
+  border: var(--ab-rule-hairline) solid var(--ab-ink);
+  border-radius: var(--ab-radius);
+  color: var(--ab-ink);
+  font-family: var(--ab-font-micro);
+  font-size: var(--ab-text-micro);
+  font-weight: 600;
+  letter-spacing: var(--ab-track-label);
+  text-transform: uppercase;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background var(--ab-motion-fast), color var(--ab-motion-fast);
+}
+
+.ab-btn:hover {
+  background: var(--ab-ink);
+  color: var(--ab-bg);
+}
+
+/* ── List row: the repeating unit of the data widgets ── */
+.ab-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: var(--ab-rule-hairline) solid var(--ab-rule);
+}
+
+.ab-row:last-child {
+  border-bottom: none;
+}
+
+/* Numeric figures: condensed Archivo with tabular digits */
+.ab-figure {
+  font-family: var(--ab-font-numeric);
+  font-variation-settings: var(--ab-axes-numeric-tight);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ab-track-tight);
+}
+
+/* Directional deltas */
+.ab-delta-up { color: var(--ab-positive); }
+.ab-delta-down { color: var(--ab-negative); }
+
+/* Imagery inside widgets is monochrome — colour belongs to the theme only */
+.ab-img-mono {
+  filter: grayscale(1) contrast(1.15);
+}

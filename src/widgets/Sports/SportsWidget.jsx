@@ -5,6 +5,10 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import WidgetHeader from '../../ui/WidgetHeader';
+import SkeletonRows from '../../ui/Skeleton';
+import ErrorState from '../../ui/ErrorState';
+import '../../ui/primitives.css';
 import './SportsWidget.css';
 
 const REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes
@@ -113,15 +117,9 @@ export default function SportsWidget() {
   // ── Loading skeleton ──
   if (loading && fixtures.length === 0) {
     return (
-      <div className="sports-widget">
-        <div className="sports-header">
-          <span className="sports-title">⚽ Sports</span>
-        </div>
-        <div className="sports-skeleton">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="sports-skel-card" />
-          ))}
-        </div>
+      <div className="ab-widget-root">
+        <WidgetHeader title="Sports" />
+        <SkeletonRows rows={3} />
       </div>
     );
   }
@@ -129,33 +127,26 @@ export default function SportsWidget() {
   // ── Error state ──
   if (error && fixtures.length === 0) {
     return (
-      <div className="sports-widget">
-        <div className="sports-header">
-          <span className="sports-title">⚽ Sports</span>
-        </div>
-        <div className="sports-error">
-          <span>⚠️ {error}</span>
-          <button className="sports-retry-btn" onClick={fetchSports}>Retry</button>
-        </div>
+      <div className="ab-widget-root">
+        <WidgetHeader title="Sports" />
+        <ErrorState message={error} onRetry={fetchSports} />
       </div>
     );
   }
 
   return (
-    <div className="sports-widget">
-      <div className="sports-header">
-        <span className="sports-title">⚽ Sports</span>
-      </div>
+    <div className="ab-widget-root">
+      <WidgetHeader title="Sports" />
 
       {/* Fixtures */}
       <div className="sports-fixtures">
         {fixtures.length === 0 && (
-          <div className="sports-empty">No upcoming fixtures found</div>
+          <div className="sports-empty">No upcoming fixtures</div>
         )}
         {fixtures.map((f) => {
           const hasScore = f.homeScore !== null && f.awayScore !== null;
           return (
-            <div key={f.id} className="sports-fixture-card">
+            <div key={f.id} className="sports-fixture-row">
               <span className="sports-league-badge">{f.league}</span>
               <div className="sports-teams">
                 <span className={`sports-team ${hasScore && Number(f.homeScore) > Number(f.awayScore) ? 'winner' : ''}`}>

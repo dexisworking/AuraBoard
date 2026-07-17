@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import WidgetGrid from './layout/WidgetGrid';
 import { getAllWidgets } from './widgets/registry';
 import { getFontPreset, getThemePreset } from './theme/presets';
+import { applyTheme } from './theme/applyTheme';
 
 const ENABLED_WIDGET_SAVE_DEBOUNCE_MS = 120;
 
@@ -44,6 +45,12 @@ export default function LayoutEditorApp() {
   useEffect(() => {
     latestEnabledWidgetsRef.current = enabledWidgets;
   }, [enabledWidgets]);
+
+  // Push theme tokens onto :root so the editor previews exactly what the
+  // screensaver will render.
+  useEffect(() => {
+    applyTheme(uiTheme);
+  }, [uiTheme]);
 
   const persistEnabledWidgets = useCallback((widgets, immediate = false) => {
     const next = Array.isArray(widgets) ? widgets : [];
@@ -133,12 +140,8 @@ export default function LayoutEditorApp() {
       style={{
         backgroundColor: themePreset.background,
         fontFamily: fontPreset.stack,
-        '--ab-font-family': fontPreset.stack,
-        '--ab-accent': themePreset.accent,
-        '--ab-widget-surface': themePreset.widgetSurface,
-        '--ab-widget-border': themePreset.widgetBorder,
-        '--ab-edit-surface': themePreset.editSurface,
-        '--ab-edit-border': themePreset.editBorder,
+        // Theme variables come exclusively from applyTheme() on :root —
+        // re-declaring them here would shadow the token channel.
       }}
     >
       

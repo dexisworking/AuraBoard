@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 
+/**
+ * ClockWidget — Swiss/Brutalist. Colossal condensed tabular numerals
+ * (Archivo Variable, wdth 64 / wght 900) with the colon as a signal-colour
+ * mark. Seconds and meridiem sit in a tracked-out mono side column.
+ */
 export default function ClockWidget({ use24hr = false, timeZone }) {
   const [time, setTime] = useState(new Date());
 
@@ -11,57 +16,53 @@ export default function ClockWidget({ use24hr = false, timeZone }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Format hours and minutes
-  const formatOptions = {
+  const formatter = new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: !use24hr,
     timeZone: timeZone || undefined,
-  };
-  
-  // Intl.DateTimeFormat does not easily split the colon perfectly across all locales to allow for blinking animation,
-  // so we will extract the parts manually or use a specific format and string replacement.
-  const formatter = new Intl.DateTimeFormat('en-US', formatOptions);
-  const parts = formatter.formatToParts(time);
-  
+  });
+
   let hours = '';
   let minutes = '';
   let ampm = '';
-
-  parts.forEach(part => {
+  formatter.formatToParts(time).forEach((part) => {
     if (part.type === 'hour') hours = part.value;
     if (part.type === 'minute') minutes = part.value;
     if (part.type === 'dayPeriod') ampm = part.value;
   });
 
-  // Handle seconds separately
-  const secondsFormatter = new Intl.DateTimeFormat('en-US', {
+  const seconds = new Intl.DateTimeFormat('en-US', {
     second: '2-digit',
     timeZone: timeZone || undefined,
-  });
-  const seconds = secondsFormatter.format(time);
+  }).format(time);
 
   return (
-    <div className="w-full h-full flex items-center justify-center text-white" style={{ fontFamily: 'inherit' }}>
-      <div 
-        className="text-8xl tabular-nums tracking-tight font-light drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
-      >
+    <div className="w-full h-full flex items-center justify-center text-ink">
+      <div className="ab-numeric" style={{ fontSize: 92 }}>
         {hours}
-        <span className="animate-[pulse_1s_ease-in-out_infinite] opacity-80 mx-1">:</span>
+        <span
+          className="text-accent"
+          style={{ animation: 'ab-colon-blink 2s steps(2, end) infinite' }}
+        >
+          :
+        </span>
         {minutes}
       </div>
-      <div className="ml-4 flex flex-col justify-end pb-2">
-        <span 
-          className="text-3xl tabular-nums opacity-60 font-light drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]"
-        >
+      <div className="ml-3 flex flex-col justify-end gap-1 pb-2">
+        <span className="ab-numeric text-ink-secondary" style={{ fontSize: 28 }}>
           {seconds}
         </span>
         {!use24hr && ampm && (
-          <span className="text-xl uppercase opacity-80 font-medium tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] mt-1">
-            {ampm}
-          </span>
+          <span className="ab-micro text-ink-tertiary">{ampm}</span>
         )}
       </div>
+      <style>{`
+        @keyframes ab-colon-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.25; }
+        }
+      `}</style>
     </div>
   );
 }

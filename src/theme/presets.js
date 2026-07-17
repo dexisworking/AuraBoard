@@ -1,14 +1,22 @@
 /**
- * Font stacks name the bundled @fontsource-variable families ("Outfit Variable"),
- * which are the names those packages register. The non-variable names are kept as
- * fallbacks, and every stack ends in a system font so text stays legible even if
- * a face fails to load.
+ * presets.js — compatibility layer over tokens.js.
+ *
+ * The token model in tokens.js is the source of truth for the Swiss/Brutalist
+ * design system. This file preserves the original FONT_PRESETS/THEME_PRESETS
+ * API shape that App.jsx, SettingsApp.jsx and LayoutEditorApp.jsx consume, so
+ * the theme switch keeps working while those hosts migrate to applyTheme().
+ *
+ * Preset IDs are unchanged (persisted `uiTheme`/`uiFont` values keep
+ * resolving); labels and values now come from the new system.
  */
+
+import { FONT_STACKS, THEMES, getTheme } from './tokens';
+
 export const FONT_PRESETS = {
   outfit: {
     id: 'outfit',
-    label: 'Outfit',
-    stack: '"Outfit Variable", "Outfit", "Inter Variable", system-ui, sans-serif',
+    label: 'Archivo (Swiss)',
+    stack: FONT_STACKS.ui,
   },
   inter: {
     id: 'inter',
@@ -18,7 +26,7 @@ export const FONT_PRESETS = {
   jetbrains: {
     id: 'jetbrains',
     label: 'JetBrains Mono',
-    stack: '"JetBrains Mono Variable", "JetBrains Mono", "Consolas", monospace',
+    stack: FONT_STACKS.micro,
   },
   georgia: {
     id: 'georgia',
@@ -27,53 +35,28 @@ export const FONT_PRESETS = {
   },
 };
 
-export const THEME_PRESETS = {
-  aurora: {
-    id: 'aurora',
-    label: 'Aurora',
-    background: '#02050a',
-    accent: '#818cf8',
-    widgetSurface: 'rgba(10,14,20,0.38)',
-    widgetBorder: 'rgba(255,255,255,0.12)',
-    editSurface: 'rgba(129,140,248,0.14)',
-    editBorder: 'rgba(129,140,248,0.60)',
-  },
-  graphite: {
-    id: 'graphite',
-    label: 'Graphite',
-    background: '#0b1018',
-    accent: '#94a3b8',
-    widgetSurface: 'rgba(15,23,42,0.50)',
-    widgetBorder: 'rgba(148,163,184,0.30)',
-    editSurface: 'rgba(148,163,184,0.16)',
-    editBorder: 'rgba(148,163,184,0.72)',
-  },
-  ocean: {
-    id: 'ocean',
-    label: 'Ocean',
-    background: '#021018',
-    accent: '#22d3ee',
-    widgetSurface: 'rgba(4,32,44,0.42)',
-    widgetBorder: 'rgba(34,211,238,0.36)',
-    editSurface: 'rgba(34,211,238,0.15)',
-    editBorder: 'rgba(34,211,238,0.74)',
-  },
-  ember: {
-    id: 'ember',
-    label: 'Ember',
-    background: '#1a0c08',
-    accent: '#fb923c',
-    widgetSurface: 'rgba(42,21,12,0.46)',
-    widgetBorder: 'rgba(251,146,60,0.34)',
-    editSurface: 'rgba(251,146,60,0.14)',
-    editBorder: 'rgba(251,146,60,0.74)',
-  },
-};
+function toLegacyPreset(theme) {
+  return {
+    id: theme.id,
+    label: theme.label,
+    background: theme.color.bg,
+    accent: theme.color.accent,
+    /* board is chromeless in the new system */
+    widgetSurface: 'transparent',
+    widgetBorder: 'transparent',
+    editSurface: 'rgba(127,127,127,0.10)',
+    editBorder: theme.color.accent,
+  };
+}
+
+export const THEME_PRESETS = Object.fromEntries(
+  Object.values(THEMES).map((theme) => [theme.id, toLegacyPreset(theme)])
+);
 
 export function getFontPreset(fontId) {
   return FONT_PRESETS[fontId] || FONT_PRESETS.outfit;
 }
 
 export function getThemePreset(themeId) {
-  return THEME_PRESETS[themeId] || THEME_PRESETS.aurora;
+  return toLegacyPreset(getTheme(themeId));
 }

@@ -1,192 +1,120 @@
-/* ── SportsWidget styles ── */
+/**
+ * SportsWidget — Swiss/Brutalist. Colour via --ab-* tokens, structure via
+ * shared primitives. Fixture "cards" become ruled rows; the ticker keeps its
+ * marquee but in tracked-out mono.
+ */
 
-.sports-widget {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  font-family: var(--ab-font-family, 'Outfit'), sans-serif;
-  color: #fff;
-  overflow: hidden;
-}
-
-.sports-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 4px 8px;
-  flex-shrink: 0;
-}
-
-.sports-title {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
-}
-
-/* ── Skeleton ── */
-.sports-skeleton {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sports-skel-card {
-  height: 56px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.06);
-  animation: sports-pulse 1.5s ease-in-out infinite;
-}
-.sports-skel-card:nth-child(2) { animation-delay: 0.15s; }
-.sports-skel-card:nth-child(3) { animation-delay: 0.3s; }
-
-@keyframes sports-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-
-/* ── Error ── */
-.sports-error {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: rgba(255,180,180,0.9);
-  font-size: 13px;
-}
-
-.sports-retry-btn {
-  padding: 6px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.sports-retry-btn:hover {
-  background: rgba(255,255,255,0.16);
-}
-
-.sports-empty {
-  text-align: center;
-  color: rgba(255,255,255,0.35);
-  font-size: 13px;
-  padding: 24px 0;
-}
-
-/* ── Fixtures ── */
 .sports-fixtures {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  overflow-y: auto;
+  flex: 1;
+  justify-content: center;
   min-height: 0;
 }
 
-.sports-fixture-card {
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.05);
-  transition: background 0.2s;
+.sports-empty {
+  font-family: var(--ab-font-micro);
+  font-size: var(--ab-text-micro);
+  font-weight: 600;
+  letter-spacing: var(--ab-track-label);
+  text-transform: uppercase;
+  color: var(--ab-ink-tertiary);
 }
 
-.sports-fixture-card:hover {
-  background: rgba(255,255,255,0.07);
+.sports-fixture-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 0;
+  border-bottom: var(--ab-rule-hairline) solid var(--ab-rule);
+}
+
+.sports-fixture-row:last-child {
+  border-bottom: none;
 }
 
 .sports-league-badge {
+  font-family: var(--ab-font-micro);
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: var(--ab-track-micro);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(99,102,241,0.9);
-  display: block;
-  margin-bottom: 4px;
+  color: var(--ab-accent);
 }
 
 .sports-teams {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: baseline;
   gap: 8px;
-  font-size: 13px;
+  min-width: 0;
 }
 
 .sports-team {
-  flex: 1;
-  text-align: center;
+  font-family: var(--ab-font-ui);
+  font-variation-settings: 'wdth' 88, 'wght' 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--ab-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: rgba(255,255,255,0.8);
 }
 
 .sports-team.winner {
-  color: #fff;
-  font-weight: 700;
+  color: var(--ab-positive);
 }
 
 .sports-vs {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.4);
+  font-family: var(--ab-font-numeric);
+  font-variation-settings: var(--ab-axes-numeric-tight);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--ab-ink-secondary);
   flex-shrink: 0;
-  min-width: 40px;
-  text-align: center;
 }
 
 .sports-fixture-meta {
-  font-size: 10px;
-  color: rgba(255,255,255,0.35);
-  text-align: center;
-  margin-top: 4px;
+  font-family: var(--ab-font-micro);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: var(--ab-track-label);
+  text-transform: uppercase;
+  color: var(--ab-ink-tertiary);
 }
 
-/* ── ESPN ticker ── */
+/* ── headline ticker: mono marquee over a hairline ── */
 .sports-ticker-container {
   flex-shrink: 0;
   overflow: hidden;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  padding-top: 6px;
+  border-top: var(--ab-rule-hairline) solid var(--ab-rule);
+  padding-top: 7px;
   margin-top: 6px;
-  height: 28px;
 }
 
 .sports-ticker {
   display: flex;
+  gap: 28px;
   white-space: nowrap;
-  animation: sports-scroll 45s linear infinite;
-}
-
-.sports-ticker-container:hover .sports-ticker {
-  animation-play-state: paused;
+  width: max-content;
+  animation: sports-ticker-scroll 45s linear infinite;
 }
 
 .sports-ticker-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  font-size: 11px;
-  color: rgba(255,255,255,0.6);
-  flex-shrink: 0;
+  font-family: var(--ab-font-micro);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: var(--ab-track-label);
+  text-transform: uppercase;
+  color: var(--ab-ink-secondary);
 }
 
 .sports-ticker-dot {
-  color: rgba(239,68,68,0.8);
-  font-size: 14px;
+  color: var(--ab-accent);
+  margin-right: 8px;
 }
 
-@keyframes sports-scroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+@keyframes sports-ticker-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
 }

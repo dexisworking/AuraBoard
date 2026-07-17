@@ -4,6 +4,10 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import WidgetHeader from '../../ui/WidgetHeader';
+import SkeletonRows from '../../ui/Skeleton';
+import ErrorState from '../../ui/ErrorState';
+import '../../ui/primitives.css';
 import './NewsWidget.css';
 
 function timeAgo(dateStr) {
@@ -104,15 +108,9 @@ export default function NewsWidget() {
   // ── Loading skeleton ──
   if (loading && headlines.length === 0) {
     return (
-      <div className="news-widget">
-        <div className="news-header">
-          <span className="news-title">📰 News</span>
-        </div>
-        <div className="news-skeleton">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="news-skeleton-line" />
-          ))}
-        </div>
+      <div className="ab-widget-root">
+        <WidgetHeader title="News" />
+        <SkeletonRows rows={4} />
       </div>
     );
   }
@@ -120,24 +118,16 @@ export default function NewsWidget() {
   // ── Error state ──
   if (error && headlines.length === 0) {
     return (
-      <div className="news-widget">
-        <div className="news-header">
-          <span className="news-title">📰 News</span>
-        </div>
-        <div className="news-error">
-          <span>⚠️ {error}</span>
-          <button className="news-retry-btn" onClick={fetchNews}>Retry</button>
-        </div>
+      <div className="ab-widget-root">
+        <WidgetHeader title="News" />
+        <ErrorState message={error} onRetry={fetchNews} />
       </div>
     );
   }
 
   return (
-    <div className="news-widget">
-      <div className="news-header">
-        <span className="news-title">📰 News</span>
-        <span className="news-source-badge">{source}</span>
-      </div>
+    <div className="ab-widget-root">
+      <WidgetHeader title="News" meta={source} />
 
       {/* Expanded headline */}
       {expanded !== null && headlines[expanded] && (

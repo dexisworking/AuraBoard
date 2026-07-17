@@ -4,15 +4,33 @@
  *
  * Fonts are bundled rather than fetched: AuraBoard activates when the machine
  * has gone idle, which is exactly when the network may be absent.
+ *
+ * Typeface roles (see src/theme/tokens.js):
+ *   Anton                    — display headlines (ultra-condensed grotesque)
+ *   Archivo Variable (wdth)  — numerals + UI; the wdth.css import matters:
+ *                              it ships the width axis (62–125) that produces
+ *                              the condensed Druk-like cut at wdth 62–75.
+ *   JetBrains Mono Variable  — micro captions, tracked-out caps
+ *   Inter Variable           — legacy fallback during migration
  */
 
-@import '@fontsource-variable/outfit';
+@import '@fontsource/anton';
+@import '@fontsource-variable/archivo/wdth.css';
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/outfit';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  /* Brutalist ground rules: square corners, hard edges, no smoothing tricks. */
+  :root {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
 
 @layer utilities {
   /* Used by the settings scroll container. Previously referenced a plugin that
@@ -24,5 +42,51 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* ── Swiss/Brutalist type roles ─────────────────────────────────────────
+     One class per role so widgets compose typography instead of restating it. */
+  .ab-display {
+    font-family: var(--ab-font-display);
+    font-weight: 400; /* Anton has a single weight */
+    line-height: var(--ab-leading-display);
+    letter-spacing: var(--ab-track-display);
+    text-transform: uppercase;
+  }
+
+  .ab-numeric {
+    font-family: var(--ab-font-numeric);
+    font-variation-settings: var(--ab-axes-numeric-condensed);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--ab-leading-display);
+    letter-spacing: var(--ab-track-tight);
+  }
+
+  .ab-ui {
+    font-family: var(--ab-font-ui);
+    font-variation-settings: 'wdth' 100, 'wght' 500;
+  }
+
+  .ab-micro {
+    font-family: var(--ab-font-micro);
+    font-size: var(--ab-text-micro);
+    letter-spacing: var(--ab-track-micro);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  /* Hairline and brutal rules — structural lines, the Swiss grid made visible */
+  .ab-rule-h {
+    border-top: var(--ab-rule-hairline) solid var(--ab-rule);
+  }
+
+  .ab-rule-strong {
+    border-top: var(--ab-rule-bold) solid var(--ab-rule-strong);
+  }
+
+  /* Photo treatment: the legibility mechanism. Applied to slideshow imagery
+     so any user photo becomes high-contrast monochrome under the signal colour. */
+  .ab-photo-treated {
+    filter: var(--ab-photo-filter);
   }
 }

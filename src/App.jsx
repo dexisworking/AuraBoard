@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import SlideshowBackground from './slideshow/SlideshowBackground';
 import WidgetGrid from './layout/WidgetGrid';
 import { getFontPreset, getThemePreset } from './theme/presets';
+import { applyTheme } from './theme/applyTheme';
 
 export default function App() {
   const [isActive, setIsActive] = useState(false);
@@ -86,6 +87,13 @@ export default function App() {
       if (cleanup) cleanup();
     };
   }, []);
+
+  // Flatten the active theme's tokens onto :root as --ab-* custom properties.
+  // Tailwind utilities and widget CSS both read these, so this one call is
+  // what makes a theme switch take effect everywhere.
+  useEffect(() => {
+    applyTheme(uiTheme);
+  }, [uiTheme]);
 
   const handleDismiss = useCallback(() => {
     if (window.electronAPI?.dismissScreensaver) {
@@ -185,12 +193,8 @@ export default function App() {
         cursor: editMode ? 'default' : 'none',
         backgroundColor: themePreset.background,
         fontFamily: fontPreset.stack,
-        '--ab-font-family': fontPreset.stack,
-        '--ab-accent': themePreset.accent,
-        '--ab-widget-surface': themePreset.widgetSurface,
-        '--ab-widget-border': themePreset.widgetBorder,
-        '--ab-edit-surface': themePreset.editSurface,
-        '--ab-edit-border': themePreset.editBorder,
+        // Theme variables come exclusively from applyTheme() on :root —
+        // re-declaring them here would shadow the token channel.
       }}
     >
       <SlideshowBackground

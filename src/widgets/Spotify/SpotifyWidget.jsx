@@ -123,22 +123,25 @@ export default function SpotifyWidget({ pollInterval = 3, onTrackUpdate }) {
   }, [authed, fetchTrack, pollInterval]);
 
   // ── Client-side progress interpolation ──────────────────────────────
+  // Only tick while something is actually playing: a permanent 60fps setState
+  // loop on an always-on ambient display is a real power cost, and it also
+  // keeps the renderer from ever going idle.
+  const isPlaying = Boolean(track?.isPlaying);
   useEffect(() => {
+    if (!isPlaying) {
+      setDisplayProgress(lastPollRef.current.progressMs);
+      return undefined;
+    }
     function tick() {
-      const { progressMs, timestamp, isPlaying } = lastPollRef.current;
-      if (isPlaying) {
-        const elapsed = Date.now() - timestamp;
-        setDisplayProgress(progressMs + elapsed);
-      } else {
-        setDisplayProgress(progressMs);
-      }
+      const { progressMs, timestamp } = lastPollRef.current;
+      setDisplayProgress(progressMs + (Date.now() - timestamp));
       animFrameRef.current = requestAnimationFrame(tick);
     }
     animFrameRef.current = requestAnimationFrame(tick);
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, []);
+  }, [isPlaying]);
 
   // ── Handlers ────────────────────────────────────────────────────────
   const handleConnect = async () => {
@@ -220,7 +223,7 @@ export default function SpotifyWidget({ pollInterval = 3, onTrackUpdate }) {
     return (
       <div className="spotify-widget">
         <div className="spotify-empty">
-          <span className="spotify-empty-icon">🎧</span>
+          <span className="spotify-empty-icon"><SpotifyLogo /></span>
           <span className="spotify-empty-text">
             {error.error === 'no_device'
               ? 'Open Spotify on a device to start listening'
@@ -255,7 +258,7 @@ export default function SpotifyWidget({ pollInterval = 3, onTrackUpdate }) {
           {track.albumArt ? (
             <img className="spotify-album-art" src={track.albumArt} alt="Album art" />
           ) : (
-            <div className="spotify-album-placeholder">🎵</div>
+            <div className="spotify-album-placeholder"><SpotifyLogo /></div>
           )}
           <div className="spotify-track-info">
             <div className="spotify-track-name">{track.name}</div>
@@ -289,7 +292,7 @@ export default function SpotifyWidget({ pollInterval = 3, onTrackUpdate }) {
 
         {/* Volume */}
         <div className="spotify-volume-row">
-          <span className="spotify-volume-icon">{track.volumePercent === 0 ? '🔇' : '🔊'}</span>
+          <span className="spotify-volume-label">Vol</span>
           <input
             type="range"
             min="0"

@@ -1,194 +1,91 @@
-/* ── CryptoWidget styles ── */
+/**
+ * CryptoWidget — Swiss/Brutalist. All colour via --ab-* tokens; structure via
+ * shared primitives (ab-widget-root/header/row). Only widget-specific layout
+ * lives here.
+ */
 
-.crypto-widget {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  font-family: var(--ab-font-family, 'Outfit'), sans-serif;
-  color: #fff;
-  overflow: hidden;
-}
-
-.crypto-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 4px 8px;
-  flex-shrink: 0;
-}
-
-.crypto-title {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
-}
-
-/* ── Skeleton ── */
-.crypto-skeleton {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.crypto-skeleton-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.04);
-}
-
-.crypto-skel-circle {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.12);
-  animation: crypto-pulse 1.5s ease-in-out infinite;
-  flex-shrink: 0;
-}
-
-.crypto-skel-text {
-  width: 50px;
-  height: 12px;
-  border-radius: 4px;
-  background: rgba(255,255,255,0.12);
-  animation: crypto-pulse 1.5s ease-in-out infinite 0.1s;
-}
-
-.crypto-skel-price {
-  margin-left: auto;
-  width: 60px;
-  height: 12px;
-  border-radius: 4px;
-  background: rgba(255,255,255,0.12);
-  animation: crypto-pulse 1.5s ease-in-out infinite 0.2s;
-}
-
-@keyframes crypto-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-
-/* ── Error ── */
-.crypto-error {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: rgba(255,180,180,0.9);
-  font-size: 13px;
-}
-
-.crypto-retry-btn {
-  padding: 6px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.crypto-retry-btn:hover {
-  background: rgba(255,255,255,0.16);
-}
-
-/* ── Coin list ── */
 .crypto-list {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
-}
-
-.crypto-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.03);
-  transition: background 0.3s;
-}
-
-.crypto-row:hover {
-  background: rgba(255,255,255,0.07);
-}
-
-/* ── Flash animation ── */
-.crypto-flash-green {
-  animation: crypto-flash-g 1.2s ease-out;
-}
-.crypto-flash-red {
-  animation: crypto-flash-r 1.2s ease-out;
-}
-
-@keyframes crypto-flash-g {
-  0%   { background: rgba(34,197,94,0.25); }
-  100% { background: rgba(255,255,255,0.03); }
-}
-@keyframes crypto-flash-r {
-  0%   { background: rgba(239,68,68,0.25); }
-  100% { background: rgba(255,255,255,0.03); }
+  flex: 1;
+  justify-content: center;
+  min-height: 0;
 }
 
 .crypto-logo {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
+  /* imagery is monochrome; colour belongs to the theme */
+  filter: grayscale(1) contrast(1.15);
 }
 
 .crypto-info {
   display: flex;
   flex-direction: column;
-  min-width: 50px;
+  min-width: 0;
+  flex: 1;
 }
 
 .crypto-symbol {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  font-family: var(--ab-font-micro);
+  font-size: var(--ab-text-micro);
+  font-weight: 600;
+  letter-spacing: var(--ab-track-label);
+  text-transform: uppercase;
+  color: var(--ab-ink);
 }
 
 .crypto-name {
-  font-size: 10px;
-  color: rgba(255,255,255,0.45);
+  font-family: var(--ab-font-micro);
+  font-size: 9px;
+  letter-spacing: var(--ab-track-label);
+  text-transform: uppercase;
+  color: var(--ab-ink-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 70px;
 }
 
 .crypto-sparkline {
   flex-shrink: 0;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .crypto-price-col {
-  margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   flex-shrink: 0;
+  min-width: 76px;
 }
 
 .crypto-price {
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--ab-font-numeric);
+  font-variation-settings: var(--ab-axes-numeric-tight);
   font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  color: var(--ab-ink);
 }
 
 .crypto-change {
-  font-size: 11px;
+  font-family: var(--ab-font-micro);
+  font-size: 10px;
   font-weight: 600;
+  letter-spacing: var(--ab-track-label);
   font-variant-numeric: tabular-nums;
+}
+
+.crypto-change.up { color: var(--ab-positive); }
+.crypto-change.down { color: var(--ab-negative); }
+
+/* price-tick flash: stepped, mechanical */
+@keyframes crypto-flash {
+  0%, 100% { background: transparent; }
+  50% { background: var(--ab-edit-surface, rgba(127, 127, 127, 0.10)); }
+}
+
+.crypto-flash-green,
+.crypto-flash-red {
+  animation: crypto-flash 1.2s steps(2, end) 1;
 }

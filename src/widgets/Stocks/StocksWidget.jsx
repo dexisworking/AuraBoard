@@ -4,6 +4,10 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import WidgetHeader from '../../ui/WidgetHeader';
+import SkeletonRows from '../../ui/Skeleton';
+import ErrorState from '../../ui/ErrorState';
+import '../../ui/primitives.css';
 import './StocksWidget.css';
 
 const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
@@ -130,18 +134,9 @@ export default function StocksWidget() {
   // ── Loading skeleton ──
   if (loading && stocks.length === 0) {
     return (
-      <div className="stocks-widget">
-        <div className="stocks-header">
-          <span className="stocks-title">📈 Stocks</span>
-        </div>
-        <div className="stocks-skeleton">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="stocks-skel-row">
-              <div className="stocks-skel-sym" />
-              <div className="stocks-skel-price" />
-            </div>
-          ))}
-        </div>
+      <div className="ab-widget-root">
+        <WidgetHeader title="Stocks" />
+        <SkeletonRows rows={5} />
       </div>
     );
   }
@@ -149,36 +144,31 @@ export default function StocksWidget() {
   // ── Error state ──
   if (error && stocks.length === 0) {
     return (
-      <div className="stocks-widget">
-        <div className="stocks-header">
-          <span className="stocks-title">📈 Stocks</span>
-        </div>
-        <div className="stocks-error">
-          <span>⚠️ {error}</span>
-          <button className="stocks-retry-btn" onClick={fetchStocks}>Retry</button>
-        </div>
+      <div className="ab-widget-root">
+        <WidgetHeader title="Stocks" />
+        <ErrorState message={error} onRetry={fetchStocks} />
       </div>
     );
   }
 
   return (
-    <div className="stocks-widget">
-      <div className="stocks-header">
-        <span className="stocks-title">📈 Stocks</span>
-        <span className={`stocks-market-status ${marketOpen ? 'open' : 'closed'}`}>
-          <span className="stocks-status-dot" />
-          {marketOpen ? 'Market Open' : 'Market Closed'}
-        </span>
-      </div>
+    <div className="ab-widget-root">
+      <WidgetHeader
+        title="Stocks"
+        meta={(
+          <span className={`stocks-market-status ${marketOpen ? 'open' : 'closed'}`}>
+            <span className="stocks-status-dot" />
+            {marketOpen ? 'Open' : 'Closed'}
+          </span>
+        )}
+      />
 
       <div className="stocks-list">
         {stocks.map((s) => {
           const positive = s.change >= 0;
-          const color = positive ? '#22c55e' : '#ef4444';
-          const arrow = positive ? '▲' : '▼';
 
           return (
-            <div key={s.symbol} className="stocks-row">
+            <div key={s.symbol} className="ab-row">
               <div className="stocks-sym-col">
                 <span className="stocks-symbol">{s.symbol}</span>
                 <span className="stocks-name">{s.name}</span>
@@ -188,8 +178,8 @@ export default function StocksWidget() {
                   {s.error ? '—' : `$${s.price.toFixed(2)}`}
                 </span>
                 {!s.error && (
-                  <span className="stocks-change" style={{ color }}>
-                    {arrow} ${Math.abs(s.change).toFixed(2)} ({Math.abs(s.changePercent).toFixed(2)}%)
+                  <span className={`stocks-change ${positive ? 'up' : 'down'}`}>
+                    {positive ? '+' : '−'}${Math.abs(s.change).toFixed(2)} ({Math.abs(s.changePercent).toFixed(2)}%)
                   </span>
                 )}
               </div>

@@ -123,10 +123,12 @@ function WidgetLoader() {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      width: '100%', height: '100%', color: 'rgba(255,255,255,0.3)',
-      fontFamily: 'inherit', fontSize: 14,
+      width: '100%', height: '100%', color: 'var(--ab-ink-tertiary, rgba(255,255,255,0.3))',
+      fontFamily: 'var(--ab-font-micro, inherit)', fontSize: 11,
+      letterSpacing: 'var(--ab-track-micro, 0.28em)', textTransform: 'uppercase',
     }}>
-      Loading…
+      Loading
+
     </div>
   );
 }
@@ -447,17 +449,19 @@ export default function WidgetGrid({
         {editMode && <RemoveButton onClick={() => handleRemove(item.i)} />}
         <div style={{
           width: '100%', height: '100%',
+          // Chromeless board: widgets sit directly on the treated photo with no
+          // card behind them. Surface/border appear only in edit mode.
           background: editMode
-            ? 'var(--ab-edit-surface, rgba(255,255,255,0.04))'
-            : 'var(--ab-widget-surface, rgba(255,255,255,0.03))',
-          borderRadius: 24, // Noticeably rounded corners
+            ? 'var(--ab-edit-surface, rgba(127,127,127,0.10))'
+            : 'transparent',
+          borderRadius: 'var(--ab-radius, 0)',
           border: editMode
-            ? '1.5px dashed var(--ab-edit-border, rgba(255,255,255,0.2))'
-            : '1px solid var(--ab-widget-border, rgba(255,255,255,0.12))',
+            ? '1.5px dashed var(--ab-edit-border, currentColor)'
+            : '1px solid transparent',
           transition: 'background 0.3s, border 0.3s',
           boxSizing: 'border-box',
           position: 'relative',
-          overflow: 'hidden', // Make sure content gets clipped by the rounded box!
+          overflow: 'hidden',
         }}>
           <Suspense fallback={<WidgetLoader />}>
             <ScaleWrapper
