@@ -57,16 +57,24 @@ visual language rather than the usual widget-soup.
 
 Two builds are available on the [latest release](https://github.com/dexisworking/auraboard/releases/latest):
 
-| Installer | Size | Wallpapers |
+| Download | Size | Notes |
 |---|---|---|
-| `AuraBoard-Setup-1.0.0.exe` | 80 MB | None — point it at your own folder |
-| `AuraBoard-Setup-1.0.0-predefined.exe` | 498 MB | 4 built-in packs: Cinematic, Anime, Superheroes, Live |
+| `AuraBoard-Setup-1.0.0.exe` | 80 MB | Standard installer. Bring your own wallpaper folder |
+| `AuraBoard-Setup-1.0.0-predefined.exe` | 498 MB | Same app, plus 4 built-in packs: Cinematic, Anime, Superheroes, Live |
+| `AuraBoard-1.0.0-portable.zip` | 109 MB | No installer — extract and run `AuraBoard.exe` |
 
-Same application either way — the predefined build just bundles 118 wallpapers
-(106 images plus 12 looping 4K video wallpapers) so it works straight out of the box.
+The predefined build bundles 118 wallpapers (106 images plus 12 looping 4K video
+wallpapers) so it works straight out of the box.
 
 1. Download one and run it
 2. AuraBoard starts in your system tray — right-click the icon for **Settings**
+
+> [!TIP]
+> **If your browser deletes the download**, that's SmartScreen reputation filtering, not
+> a virus — unsigned installers from new publishers get discarded automatically. Use the
+> **portable ZIP** instead; archives are rarely blocked. You can also choose *Keep* in
+> your browser's download list, or verify the SHA-256 published on the
+> [release](https://github.com/dexisworking/auraboard/releases/latest) first.
 
 > [!NOTE]
 > **Windows SmartScreen will warn you on first run.** The installer isn't code-signed
@@ -74,6 +82,13 @@ Same application either way — the predefined build just bundles 118 wallpapers
 > If you'd rather not trust a binary, [build it yourself](#build-from-source) — it takes two commands.
 
 **Requirements:** Windows 10 or 11 (x64). No runtime dependencies — everything is bundled.
+
+### Portable
+
+Prefer no installer? Download `AuraBoard-1.0.0-portable.zip`, extract it anywhere, and
+run `AuraBoard.exe`. Nothing is written to Program Files and no registry keys are set —
+though that also means AuraBoard won't register itself as your Windows screensaver, so
+you'll launch it manually or add it to startup yourself.
 
 ### Build from source
 

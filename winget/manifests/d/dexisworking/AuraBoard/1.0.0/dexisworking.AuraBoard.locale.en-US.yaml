@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: dexisworking.AuraBoard
+PackageVersion: 1.0.0
+PackageLocale: en-US
+Publisher: dexisworking
+PublisherUrl: https://github.com/dexisworking
+PublisherSupportUrl: https://github.com/dexisworking/AuraBoard/issues
+PackageName: AuraBoard
+PackageUrl: https://github.com/dexisworking/AuraBoard
+License: MIT
+LicenseUrl: https://github.com/dexisworking/AuraBoard/blob/main/LICENSE
+Copyright: Copyright (c) 2026 dexisworking
+ShortDescription: Turn your idle Windows screen into a designed ambient dashboard.
+Description: |-
+  AuraBoard replaces the blank Windows screensaver with a designed ambient display:
+  a full-screen photo or video slideshow with live widgets arranged on a free-form grid.
+
+  It runs from the system tray, activates on system idle, and dismisses on input.
+  Fourteen widgets are included - clock, date, greeting, weather, moon, sun, calendar,
+  countdown, system stats, Spotify, news, crypto, stocks and sports - each with three
+  visual variants. Widgets can be dragged, resized from any edge and overlapped, and
+  layouts persist across restarts.
+
+  Backgrounds come from any folder you choose, covering both images (JPEG, PNG, WebP,
+  GIF) and video (MP4, WebM, MOV). Videos loop and are always muted. Four themes are
+  included, with an optional time-of-day palette, and multi-monitor setups can run on
+  every display or a chosen subset.
+Moniker: auraboard
+Tags:
+  - ambient-display
+  - dashboard
+  - desktop
+  - screensaver
+  - slideshow
+  - spotify
+  - wallpaper
+  - widgets
+ReleaseNotesUrl: https://github.com/dexisworking/AuraBoard/releases/tag/v1.0.0
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

@@ -24,6 +24,10 @@ const { version } = require('../package.json');
 const RELEASE_DIR = 'release';
 const PLAIN = `AuraBoard-Setup-${version}.exe`;
 const LABELLED = `AuraBoard-Setup-${version}-predefined.exe`;
+// The zip target emits the same filename for both variants, so it has to be
+// disambiguated too or a predefined build silently overwrites the standard one.
+const ZIP_PLAIN = `AuraBoard-${version}-portable.zip`;
+const ZIP_LABELLED = `AuraBoard-${version}-predefined-portable.zip`;
 
 async function exists(p) {
   try { await fs.access(p); return true; } catch { return false; }
@@ -47,6 +51,7 @@ async function renameIfPresent(from, to) {
 
 await renameIfPresent(PLAIN, LABELLED);
 await renameIfPresent(`${PLAIN}.blockmap`, `${LABELLED}.blockmap`);
+await renameIfPresent(ZIP_PLAIN, ZIP_LABELLED);
 
 /* Repoint the update manifest. Only the filename changes — electron-builder
    already wrote the correct sha512/size for this binary.

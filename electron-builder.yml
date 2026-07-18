@@ -27,10 +27,20 @@ win:
     - target: nsis
       arch:
         - x64
+    # Portable ZIP. Unsigned NSIS .exe downloads are what browser SmartScreen
+    # auto-deletes on reputation grounds; a zip of the unpacked app is far less
+    # likely to be discarded, so it gives people a way in while the installer
+    # builds reputation (or until it is code-signed).
+    - target: zip
+      arch:
+        - x64
   icon: assets/icon.ico
-  artifactName: ${productName}-Setup-${version}.${ext}
+  # Default for non-nsis targets (the zip). nsis overrides this below — calling
+  # a portable archive "Setup" would be actively misleading.
+  artifactName: ${productName}-${version}-portable.${ext}
 
 nsis:
+  artifactName: ${productName}-Setup-${version}.${ext}
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
