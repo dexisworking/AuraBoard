@@ -19,7 +19,11 @@ a full-screen photo or video slideshow with live widgets laid out exactly how yo
 
 ---
 
-![The board](docs/screenshots/board-signal.png)
+![AuraBoard running on a desktop display](assets/hero-mockup.png)
+
+<div align="center">
+<sub>AuraBoard on the Ember theme — clock, date, weather, moon phase, countdown, system, sports and crypto over a full-bleed wallpaper.</sub>
+</div>
 
 ## Why AuraBoard
 
@@ -48,9 +52,9 @@ visual language rather than the usual widget-soup.
 
 <div align="center">
 
-| Newsprint theme | Settings |
+| Signal theme | Newsprint theme |
 |:---:|:---:|
-| ![Newsprint theme](docs/screenshots/board-newsprint.png) | ![Settings](docs/screenshots/settings.png) |
+| ![Signal theme](docs/screenshots/board-signal.png) | ![Newsprint theme](docs/screenshots/board-newsprint.png) |
 
 </div>
 
@@ -112,6 +116,8 @@ Once installed, right-click the tray icon:
 - **Settings** — idle timeout, wallpaper folder, theme, widget data sources, Spotify
 - **Layout Editor** — add/remove widgets, then drag and resize them into place
 - **Preview** — see the board immediately without waiting to go idle
+
+![Settings](docs/screenshots/settings.png)
 
 ### Choosing wallpapers
 
