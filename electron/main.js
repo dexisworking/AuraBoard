@@ -10,6 +10,7 @@ import * as providers from './services/providers.js';
 import electronUpdater from 'electron-updater';
 
 const { autoUpdater } = electronUpdater;
+const isDev = !app.isPackaged;
 
 const rssParser = new RssParser();
 
@@ -69,12 +70,13 @@ function registerMediaProtocol() {
  */
 const CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  isDev ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'" : "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${MEDIA_SCHEME}: https:`,
   "font-src 'self' data:",
   [
     "connect-src 'self'",
+    isDev ? "ws://localhost:5173 ws://127.0.0.1:5173 ws://localhost:5174 ws://127.0.0.1:5174 http://localhost:5173 http://localhost:5174" : "",
     'https://api.open-meteo.com',
     'https://geocoding-api.open-meteo.com',
     'https://air-quality-api.open-meteo.com',
@@ -84,7 +86,7 @@ const CSP = [
     'https://www.thesportsdb.com',
     'https://ipapi.co',
     'https://api.spotify.com',
-  ].join(' '),
+  ].join(' ').trim().replace(/\s+/g, ' '),
   "object-src 'none'",
   "frame-src 'none'",
 ].join('; ');
@@ -181,7 +183,6 @@ let settingsWindow = null;
 let layoutEditorWindow = null; // Phase 5.1 layout editor window
 let tray = null;
 let idleCheckInterval = null;
-const isDev = !app.isPackaged;
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']);
 
 // ── Initialize electron-store (ESM module, must use dynamic import) ───

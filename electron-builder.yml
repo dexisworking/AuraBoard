@@ -2,6 +2,11 @@ appId: com.auraboard.app
 productName: AuraBoard
 copyright: Copyright © 2026 AuraBoard
 
+publish:
+  provider: github
+  owner: dexisworking
+  repo: auraboard
+
 directories:
   buildResources: assets
   output: release

@@ -81,6 +81,7 @@ export default function App() {
         setUiFont(settings.uiFont ?? 'outfit');
         setUserName(settings.userName ?? '');
         setWeatherLocation(settings.weatherLocation ?? '');
+        console.log('App loaded settings. weatherLocation =', settings.weatherLocation);
         setPhotoTreatment(settings.photoTreatment ?? 'mono');
         setTimeOfDayPalette(Boolean(settings.timeOfDayPalette));
         setPosterMomentInterval(Number(settings.posterMomentInterval) || 0);

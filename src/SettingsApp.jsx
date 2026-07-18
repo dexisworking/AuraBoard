@@ -316,6 +316,11 @@ export default function SettingsApp() {
           ? selectedDisplayIds
           : fallbackDisplayIds;
 
+      console.log('[React SaveSettings payload]:', {
+        weatherLocation,
+        uiTheme,
+        autostart,
+      });
       await window.electronAPI.saveSettings({
         idleTimeout: Number(idleTimeout),
         slideshowInterval: Number(slideshowInterval),
