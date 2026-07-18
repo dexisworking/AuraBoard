@@ -1,12 +1,16 @@
 /**
- * WidgetGrid — drag-and-drop widget layout engine using react-grid-layout v1.5.
+ * WidgetGrid — drag-and-drop widget layout engine using react-grid-layout v2.
+ * NOTE: v2 takes gridConfig/dragConfig/resizeConfig/compactor objects. The v1
+ * flat props (cols, rowHeight, isDraggable, compactType, allowOverlap, …) are
+ * NOT errors in v2 — they are silently ignored and the grid falls back to its
+ * defaults (rowHeight 150, vertical compaction). Don't reintroduce them.
  * 12-column grid; rowHeight is computed to fill the viewport height.
  * EDIT MODE: drag widgets anywhere, free-resize from any edge/corner, remove.
  * DISPLAY MODE (default): static layout, no interaction.
  */
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import GridLayout from 'react-grid-layout';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import GridLayout, { getCompactor } from 'react-grid-layout';
 import {
   getWidget, getDefaultLayout, getDefaultVariant, getMinSize, GRID_ROWS,
 } from '../widgets/registry';
@@ -25,6 +29,11 @@ const DEFAULT_MAX_GRID_HEIGHT = 100;
 // current version are discarded so users don't stay stuck on the old
 // screen-filling defaults; every item carries the stamp it was saved under.
 const LAYOUT_VERSION = 2;
+
+// react-grid-layout v2 takes compaction as a compactor object rather than the v1
+// compactType/allowOverlap/preventCollision props. This one never compacts and
+// permits overlap, so widgets stay exactly where the user drops them.
+const OVERLAP_COMPACTOR = getCompactor(null, true, false);
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -414,6 +423,37 @@ export default function WidgetGrid({
     if (onRemoveWidget) onRemoveWidget(widgetId);
   }, [onRemoveWidget]);
 
+  /* ── fixed rowHeight: the grid is a constant GRID_ROWS-tall cell grid, like an
+     Android home screen. rowHeight depends ONLY on the container height, never
+     on the live layout — so dragging or resizing a widget never reflows the
+     others (that mid-interaction reflow was the source of editor instability). */
+  const rowHeight = useMemo(() => {
+    const usableHeight = containerHeight - MARGIN[1] * (GRID_ROWS + 1);
+    return (containerHeight > 0 && usableHeight > 0)
+      ? Math.max(28, usableHeight / GRID_ROWS)
+      : ROW_HEIGHT;
+  }, [containerHeight]);
+
+  /* ── v2 config objects. These are spread into useMemo deps inside GridLayout,
+     so they must be referentially stable or the grid recomputes every render. */
+  const gridConfig = useMemo(() => ({
+    cols: COLS,
+    rowHeight,
+    maxRows: GRID_ROWS,
+    margin: MARGIN,
+    containerPadding: MARGIN,
+  }), [rowHeight]);
+
+  const dragConfig = useMemo(() => ({
+    enabled: editMode,
+    cancel: '.widget-no-drag, .react-resizable-handle',
+  }), [editMode]);
+
+  const resizeConfig = useMemo(() => ({
+    enabled: editMode,
+    handles: editMode ? ['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne'] : [],
+  }), [editMode]);
+
   if (!mounted || !layout || !widthReady || !width) return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
 
   /* ── build the set of visible layout items (only enabled widgets) ── */
@@ -428,18 +468,9 @@ export default function WidgetGrid({
       // NEVER mark items static. react-grid-layout's correctBounds() shoves
       // *static* items downward whenever they collide — which silently pushed
       // overlapping widgets off-screen in display mode. Interaction is already
-      // disabled via isDraggable/isResizable, so static buys nothing.
+      // disabled via dragConfig/resizeConfig, so static buys nothing.
       static: false,
     }));
-
-  /* ── fixed rowHeight: the grid is a constant GRID_ROWS-tall cell grid, like an
-     Android home screen. rowHeight depends ONLY on the container height, never
-     on the live layout — so dragging or resizing a widget never reflows the
-     others (that mid-interaction reflow was the source of editor instability). */
-  const usableHeight = containerHeight - MARGIN[1] * (GRID_ROWS + 1);
-  const rowHeight = (containerHeight > 0 && usableHeight > 0)
-    ? Math.max(28, usableHeight / GRID_ROWS)
-    : ROW_HEIGHT;
 
   /* ── render each widget inside the grid ── */
   const widgetItems = visibleLayout.map((item) => {
@@ -523,20 +554,11 @@ export default function WidgetGrid({
       <GridLayout
         className={`widget-grid ${editMode ? 'is-editing' : ''}`}
         layout={visibleLayout}
-        cols={COLS}
-        maxRows={GRID_ROWS}
-        rowHeight={rowHeight}
         width={width}
-        margin={MARGIN}
-        containerPadding={MARGIN}
-        isDraggable={editMode}
-        isResizable={editMode}
-        resizeHandles={editMode ? ['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne'] : []}
-        draggableCancel=".widget-no-drag, .react-resizable-handle"
-        useCSSTransforms
-        compactType={null}
-        allowOverlap
-        preventCollision={false}
+        gridConfig={gridConfig}
+        dragConfig={dragConfig}
+        resizeConfig={resizeConfig}
+        compactor={OVERLAP_COMPACTOR}
         onLayoutChange={handleLayoutChange}
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}
