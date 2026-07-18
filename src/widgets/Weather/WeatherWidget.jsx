@@ -33,22 +33,40 @@ export default function WeatherWidget({ city = '', useFahrenheit = false, varian
     try {
       setLoading(true);
       setError(null);
-      let lat, lon, locName = city;
+      const wanted = (city || '').trim();
+      let lat;
+      let lon;
+      let locName = wanted;
 
-      if (!city) {
-        const ipRes = await fetch('https://ipapi.co/json/');
-        if (!ipRes.ok) throw new Error('Location detection failed');
-        const ipData = await ipRes.json();
-        lat = ipData.latitude;
-        lon = ipData.longitude;
-        locName = ipData.city;
+      if (wanted) {
+        // Open-Meteo's own geocoder: free, CORS-friendly and no User-Agent or
+        // rate-limit requirements (unlike Nominatim, which often 403s here).
+        const geoRes = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(wanted)}&count=1&language=en&format=json`
+        );
+        if (!geoRes.ok) throw new Error('Location lookup failed — check your connection');
+        const geo = await geoRes.json();
+        const hit = geo?.results?.[0];
+        if (!hit) throw new Error(`"${wanted}" not found — try a different spelling`);
+        lat = hit.latitude;
+        lon = hit.longitude;
+        locName = hit.name + (hit.country_code ? `, ${hit.country_code}` : '');
       } else {
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`);
-        if (!geoRes.ok) throw new Error('Geocoding failed');
-        const geoData = await geoRes.json();
-        if (geoData.length === 0) throw new Error(`City "${city}" not found`);
-        lat = geoData[0].lat;
-        lon = geoData[0].lon;
+        // No manual location: try IP geolocation, but treat failure as a
+        // prompt to set one rather than a dead end.
+        try {
+          const ipRes = await fetch('https://ipapi.co/json/');
+          if (!ipRes.ok) throw new Error('ip lookup failed');
+          const ipData = await ipRes.json();
+          if (!Number.isFinite(ipData?.latitude) || !Number.isFinite(ipData?.longitude)) {
+            throw new Error('ip lookup returned no coordinates');
+          }
+          lat = ipData.latitude;
+          lon = ipData.longitude;
+          locName = ipData.city || 'Local area';
+        } catch {
+          throw new Error('Auto-location unavailable — set a Weather Location in Settings');
+        }
       }
 
       setLocationName(locName);

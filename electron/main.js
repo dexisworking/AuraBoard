@@ -43,13 +43,15 @@ async function initStore() {
         // widget id. Replaces the old hardcoded widget props (incl. 'Dex').
         widgetConfig: {},
         userName: '',
+        // Manual weather location. Empty = auto-detect via IP geolocation,
+        // which can fail or be rate-limited — hence the manual override.
+        weatherLocation: '',
         gnewsApiKey: '',
         alphaVantageApiKey: '',
         stockSymbols: 'AAPL,MSFT,GOOGL,AMZN,TSLA',
         cryptoCoinIds: 'bitcoin,ethereum,solana,binancecoin,cardano',
         sportsLeagues: '4387,4328',
         autostart: false,
-        weatherLocation: '',
       },
     });
   } catch (err) {
@@ -445,6 +447,7 @@ function setupIPC() {
       uiTheme: store ? store.get('uiTheme', 'aurora') : 'aurora',
       uiFont: store ? store.get('uiFont', 'outfit') : 'outfit',
       userName: store ? store.get('userName', '') : '',
+      weatherLocation: store ? store.get('weatherLocation', '') : '',
       screensaverUseAllDisplays: store ? store.get('screensaverUseAllDisplays', true) : true,
       screensaverDisplayIds: store ? store.get('screensaverDisplayIds', []) : [],
       useSpotifyArtBackground: store ? store.get('useSpotifyArtBackground', false) : false,
@@ -455,7 +458,6 @@ function setupIPC() {
       cryptoCoinIds: store ? store.get('cryptoCoinIds', 'bitcoin,ethereum,solana,binancecoin,cardano') : 'bitcoin,ethereum,solana,binancecoin,cardano',
       sportsLeagues: store ? store.get('sportsLeagues', '4387,4328') : '4387,4328',
       autostart: store ? store.get('autostart', false) : false,
-      weatherLocation: store ? store.get('weatherLocation', '') : '',
     };
   });
 
@@ -493,6 +495,9 @@ function setupIPC() {
     }
     if (data.userName !== undefined) {
       store.set('userName', String(data.userName).slice(0, 40));
+    }
+    if (data.weatherLocation !== undefined) {
+      store.set('weatherLocation', String(data.weatherLocation).slice(0, 80).trim());
     }
     if (data.screensaverUseAllDisplays !== undefined) {
       store.set('screensaverUseAllDisplays', Boolean(data.screensaverUseAllDisplays));
@@ -540,9 +545,6 @@ function setupIPC() {
       } catch (err) {
         console.error('Failed to set login item settings:', err);
       }
-    }
-    if (data.weatherLocation !== undefined) {
-      store.set('weatherLocation', String(data.weatherLocation));
     }
     return { success: true };
   });

@@ -382,7 +382,11 @@ export default function WidgetGrid({
     .filter((l) => enabledSet.has(l.i))
     .map((l) => ({
       ...l,
-      static: !editMode,
+      // NEVER mark items static. react-grid-layout's correctBounds() shoves
+      // *static* items downward whenever they collide — which silently pushed
+      // overlapping widgets off-screen in display mode. Interaction is already
+      // disabled via isDraggable/isResizable, so static buys nothing.
+      static: false,
     }));
 
   /* ── fixed rowHeight: the grid is a constant GRID_ROWS-tall cell grid, like an
