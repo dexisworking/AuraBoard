@@ -2,10 +2,16 @@ appId: com.auraboard.app
 productName: AuraBoard
 copyright: Copyright © 2026 AuraBoard
 
+# Two update lanes on one repo. The standard (no-packs) build stays on `latest`;
+# `build:win` overrides this to `predefined` via -c.publish.channel, which both
+# names the manifest (predefined.yml) and bakes `channel: predefined` into the
+# app-update.yml shipped inside that build. Without that the two variants share
+# one lane and a predefined release lands on people who chose the small one.
 publish:
   provider: github
   owner: dexisworking
   repo: auraboard
+  channel: latest
 
 directories:
   buildResources: assets

@@ -48,20 +48,37 @@ async function renameIfPresent(from, to) {
 await renameIfPresent(PLAIN, LABELLED);
 await renameIfPresent(`${PLAIN}.blockmap`, `${LABELLED}.blockmap`);
 
-// Repoint latest.yml. Only the filename changes — electron-builder already wrote
-// the correct sha512/size for this binary.
-const manifestPath = path.join(RELEASE_DIR, 'latest.yml');
-if (await exists(manifestPath)) {
-  const before = await fs.readFile(manifestPath, 'utf8');
-  const after = before.replaceAll(PLAIN, LABELLED);
-  if (before !== after) {
-    await fs.writeFile(manifestPath, after);
-    console.log(`  manifest latest.yml -> ${LABELLED}`);
-  } else {
-    console.log('  manifest already correct');
-  }
-} else {
-  console.log('  missing  latest.yml');
+/* Repoint the update manifest. Only the filename changes — electron-builder
+   already wrote the correct sha512/size for this binary.
+
+   The channel build emits `predefined.yml`; `latest.yml` is handled as a
+   fallback in case the channel override was dropped, so a misconfigured build
+   still produces a self-consistent manifest rather than one naming a file that
+   is not on the release. */
+const MANIFEST = 'predefined.yml';
+let manifest = null;
+for (const candidate of [MANIFEST, 'latest.yml']) {
+  if (await exists(path.join(RELEASE_DIR, candidate))) { manifest = candidate; break; }
 }
 
-console.log(`\n  Publish with:\n    gh release upload <tag> ${RELEASE_DIR}/${LABELLED} ${RELEASE_DIR}/${LABELLED}.blockmap ${RELEASE_DIR}/latest.yml --clobber\n`);
+if (!manifest) {
+  console.log('  missing  predefined.yml and latest.yml');
+} else {
+  if (manifest !== MANIFEST) {
+    console.warn(`  WARNING: found ${manifest}, expected ${MANIFEST}.`);
+    console.warn('           The publish channel override is missing — this build would');
+    console.warn('           update on the same lane as the standard installer.');
+  }
+  const p = path.join(RELEASE_DIR, manifest);
+  const before = await fs.readFile(p, 'utf8');
+  const after = before.replaceAll(PLAIN, LABELLED);
+  if (before !== after) {
+    await fs.writeFile(p, after);
+    console.log(`  manifest ${manifest} -> ${LABELLED}`);
+  } else {
+    console.log(`  manifest ${manifest} already correct`);
+  }
+}
+
+const m = manifest ?? MANIFEST;
+console.log(`\n  Publish with:\n    gh release upload <tag> ${RELEASE_DIR}/${LABELLED} ${RELEASE_DIR}/${LABELLED}.blockmap ${RELEASE_DIR}/${m} --clobber\n`);

@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "build:win": "npm run packs:sync && electron-vite build && electron-builder --win && node scripts/label-predefined.mjs",
+    "build:win": "npm run packs:sync && electron-vite build && electron-builder --win -c.publish.channel=predefined && node scripts/label-predefined.mjs",
     "packs:clean": "node -e \"require('node:fs').rmSync('packs',{recursive:true,force:true})\"",
     "build:win:nopacks": "npm run packs:clean && electron-vite build && electron-builder --win",
     "preview": "electron-vite preview",
