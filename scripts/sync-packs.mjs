@@ -59,10 +59,10 @@ for (const pack of PACKS) {
 
   totalFiles += files;
   totalBytes += bytes;
-  console.log(`  ${pack.id.padEnd(12)} ${String(files).padStart(4)} images  ${(bytes / 1e6).toFixed(1).padStart(7)} MB`);
+  console.log(`  ${pack.id.padEnd(12)} ${String(files).padStart(4)} files   ${(bytes / 1e6).toFixed(1).padStart(7)} MB`);
 }
 
-console.log(`\n  ${String(totalFiles).padStart(4)} images  ${(totalBytes / 1e6).toFixed(1).padStart(7)} MB → ${path.relative(path.join(__dirname, '..'), root)}/`);
+console.log(`\n  ${String(totalFiles).padStart(4)} files   ${(totalBytes / 1e6).toFixed(1).padStart(7)} MB → ${path.relative(path.join(__dirname, '..'), root)}/`);
 if (missing) {
   console.log(`  ${missing} pack(s) skipped. Builds will ship those as empty.`);
 }

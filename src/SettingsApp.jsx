@@ -94,6 +94,17 @@ const LEAGUE_OPTIONS = [
   { id: '4335', name: 'LaLiga' },
 ];
 
+/**
+ * Label a pack by what it actually holds — an all-video pack like Live should
+ * not be advertised as "12 images".
+ */
+function packCountLabel({ count = 0, videoCount = 0 }) {
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  if (videoCount === count) return plural(count, 'video');
+  if (videoCount === 0) return plural(count, 'image');
+  return `${plural(count - videoCount, 'image')} · ${plural(videoCount, 'video')}`;
+}
+
 export default function SettingsApp() {
   const [idleTimeout, setIdleTimeout] = useState(5);
   const [slideshowFolder, setSlideshowFolder] = useState('');
@@ -914,7 +925,7 @@ export default function SettingsApp() {
                               ? 'Switching…'
                               : empty
                                 ? 'Not in this build'
-                                : `${pack.count} image${pack.count === 1 ? '' : 's'}`}
+                                : packCountLabel(pack)}
                           </span>
                         </button>
                       );

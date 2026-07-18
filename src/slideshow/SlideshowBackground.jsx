@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import GradientBackground from './GradientBackground';
 
 const TRANSITION_MS = 1500;
-/** Hard ceiling on how long a single video slide holds the screen. */
-const VIDEO_MAX_MS = 15_000;
 
 /** toMediaUrl keeps the real extension on the URL, so a suffix test is enough. */
 function isVideoSrc(src) {
@@ -96,8 +94,12 @@ function preloadImage(src) {
  *
  * play() is called explicitly too: muted autoplay is normally permitted, but
  * relying on it silently leaves a frozen first frame wherever it isn't.
+ *
+ * Videos loop for the whole slide interval — live wallpapers are built as short
+ * seamless loops, so repeating them is the intended presentation rather than
+ * cutting one off partway through.
  */
-function SlideMedia({ src, animation, durationS, onVideoDuration }) {
+function SlideMedia({ src, animation, durationS }) {
   const setupVideo = useCallback((el) => {
     if (!el) return;
     el.muted = true;
@@ -127,15 +129,12 @@ function SlideMedia({ src, animation, durationS, onVideoDuration }) {
         ref={setupVideo}
         src={src}
         muted
+        loop
         autoPlay
         playsInline
         controls={false}
         disablePictureInPicture
         preload="auto"
-        onLoadedMetadata={(e) => {
-          const seconds = e.currentTarget.duration;
-          if (Number.isFinite(seconds) && seconds > 0) onVideoDuration?.(seconds * 1000);
-        }}
         style={style}
       />
     );
@@ -157,7 +156,6 @@ export default function SlideshowBackground({
     createInitialState(initialImages, shuffle),
   );
   const transitionTimeoutRef = useRef(null);
-  const [videoDurationMs, setVideoDurationMs] = useState(null);
   const currentIndex = safeImages.length ? state.currentIndex % safeImages.length : 0;
   const nextIndex = safeImages.length ? state.nextIndex % safeImages.length : 0;
 
@@ -173,20 +171,12 @@ export default function SlideshowBackground({
     preloadImage(safeImages[nextIndex]);
   }, [nextIndex, safeImages]);
 
-  /* How long the CURRENT slide holds the screen. Images use the configured
-     interval; videos use their own length capped at 15s, so a short clip does
-     not sit frozen on its last frame for the rest of a long interval. The real
-     length only arrives with loadedmetadata, so we start at the cap and shorten
-     once it is known. */
+  /* Every slide holds for the configured interval, video included. Videos loop
+     rather than being truncated, so a 10s live wallpaper repeats for the whole
+     interval instead of being cut mid-scene, and nothing ever freezes on a last
+     frame. Clip length no longer affects timing at all. */
   const currentIsVideo = isVideoSrc(safeImages[currentIndex]);
-  const dwellMs = currentIsVideo
-    ? Math.min(VIDEO_MAX_MS, videoDurationMs ?? VIDEO_MAX_MS)
-    : Math.max(1, interval) * 1000;
-
-  // A new slide invalidates the previous clip's measured duration.
-  useEffect(() => {
-    setVideoDurationMs(null);
-  }, [currentIndex]);
+  const dwellMs = Math.max(1, interval) * 1000;
 
   useEffect(() => {
     if (safeImages.length <= 1 || state.isTransitioning) {
@@ -334,7 +324,6 @@ export default function SlideshowBackground({
               src={currentImage}
               animation={currentIsVideo ? null : state.currentAnimation}
               durationS={Math.max(2, interval)}
-              onVideoDuration={setVideoDurationMs}
             />
           </div>
 
