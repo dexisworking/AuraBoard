@@ -1005,12 +1005,18 @@ app.whenReady().then(async () => {
   migrateSecrets();
   setupAutoUpdate();
 
-  // Set app to start on Windows login
+  // Keep the OS login item in sync with the user's preference. This used to
+  // force openAtLogin:true on every launch, which silently undid turning
+  // autostart off in Settings.
   if (!isDev) {
-    app.setLoginItemSettings({
-      openAtLogin: true,
-      path: app.getPath('exe'),
-    });
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: store ? Boolean(store.get('autostart', false)) : false,
+        path: app.getPath('exe'),
+      });
+    } catch (err) {
+      console.error('Failed to sync login item settings:', err);
+    }
   }
 
   setupIPC();

@@ -7,7 +7,9 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import GridLayout from 'react-grid-layout';
-import { getWidget, getDefaultLayout, getDefaultVariant, GRID_ROWS } from '../widgets/registry';
+import {
+  getWidget, getDefaultLayout, getDefaultVariant, getMinSize, GRID_ROWS,
+} from '../widgets/registry';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -18,6 +20,11 @@ const MARGIN = [10, 10];
 const COLS = 12;
 const MIN_LAYOUT_WIDTH_FOR_SAVE = 100;
 const DEFAULT_MAX_GRID_HEIGHT = 100;
+
+// Bumped when the default sizing rules change. Saved layouts written before the
+// current version are discarded so users don't stay stuck on the old
+// screen-filling defaults; every item carries the stamp it was saved under.
+const LAYOUT_VERSION = 2;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -81,8 +88,39 @@ function normalizeLayout(layoutInput) {
         maxW: normalizedMaxW,
         maxH: normalizedMaxH,
         z,
+        v: LAYOUT_VERSION,
       };
     });
+}
+
+/** True when every item was saved under the current sizing rules. */
+function isCurrentVersion(layoutInput) {
+  return Array.isArray(layoutInput)
+    && layoutInput.length > 0
+    && layoutInput.every((item) => item?.v === LAYOUT_VERSION);
+}
+
+function overlaps(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/**
+ * Place a newly enabled widget at its minimum size in the first free slot,
+ * scanning left→right then top→bottom. Falls back to the top-left corner (an
+ * overlap) when the board is full — overlap is allowed, off-screen is not.
+ */
+function placeNewWidget(widgetId, existingLayout) {
+  const { w, h } = getMinSize(widgetId);
+  const occupied = Array.isArray(existingLayout) ? existingLayout : [];
+
+  for (let y = 0; y <= GRID_ROWS - h; y += 1) {
+    for (let x = 0; x <= COLS - w; x += 1) {
+      const candidate = { i: widgetId, x, y, w, h };
+      if (!occupied.some((item) => overlaps(candidate, item))) return candidate;
+    }
+  }
+
+  return { i: widgetId, x: 0, y: 0, w, h };
 }
 
 function mergeLayoutWithPrevious(nextLayout, previousLayout) {
@@ -233,7 +271,10 @@ export default function WidgetGrid({
         const saved = await window.electronAPI?.getWidgetLayout?.();
         if (!active) return;
 
-        const normalizedSaved = normalizeLayout(saved);
+        // Layouts saved under the old screen-filling defaults are dropped so the
+        // board comes back at minimum-size packing instead of oversized cells.
+        const usableSaved = isCurrentVersion(saved) ? saved : null;
+        const normalizedSaved = normalizeLayout(usableSaved);
         const defaultL = getDefaultLayout(enabledWidgets);
         let finalLayout = defaultL;
 
@@ -241,11 +282,13 @@ export default function WidgetGrid({
           const loaded = cloneLayout(normalizedSaved);
           // Align loaded layout with currently enabled widgets
           const enabledSet = new Set(enabledWidgets);
-          let aligned = loaded.filter((l) => enabledSet.has(l.i));
+          const aligned = loaded.filter((l) => enabledSet.has(l.i));
           const currentIds = new Set(aligned.map((l) => l.i));
           for (const def of defaultL) {
             if (!currentIds.has(def.i) && enabledSet.has(def.i)) {
-              aligned.push(def);
+              // Newly enabled: drop it in at minimum size in a free slot rather
+              // than at its packed default position, which may be occupied.
+              aligned.push(placeNewWidget(def.i, aligned));
             }
           }
           finalLayout = normalizeLayout(aligned);

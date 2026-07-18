@@ -279,58 +279,56 @@ export function getWidget(id) {
 
 /**
  * The board is a fixed GRID_COLS × GRID_ROWS grid (like an Android home screen).
- * Default compositions below tile that grid with no gaps so the board fills the
- * screen, while rowHeight stays constant during editing (stable drag/resize).
+ * Widgets are always PLACED at their minimum size and packed shelf-style so the
+ * whole set fits inside one screen — never wider or taller than the grid. The
+ * user grows them from there in edit mode; overlap is allowed at all times.
  */
 export const GRID_COLS = 12;
 export const GRID_ROWS = 12;
 
-// Tuned editorial compositions that fill the full 12×12 grid, no gaps/overlap.
-const COMPOSITION_DEFAULT5 = [
-  { i: 'clock',    x: 0, y: 0, w: 8, h: 6 },
-  { i: 'date',     x: 8, y: 0, w: 4, h: 3 },
-  { i: 'weather',  x: 8, y: 3, w: 4, h: 9 },
-  { i: 'greeting', x: 0, y: 6, w: 5, h: 6 },
-  { i: 'spotify',  x: 5, y: 6, w: 3, h: 6 },
-];
+/** The smallest legal footprint for a widget, bounded by the grid itself. */
+export function getMinSize(id) {
+  const meta = WIDGETS[id];
+  return {
+    w: Math.min(meta?.minSize?.w ?? 2, GRID_COLS),
+    h: Math.min(meta?.minSize?.h ?? 2, GRID_ROWS),
+  };
+}
 
-const COMPOSITION_ALL9 = [
-  { i: 'clock',    x: 0, y: 0, w: 6, h: 6 },
-  { i: 'date',     x: 6, y: 0, w: 3, h: 3 },
-  { i: 'weather',  x: 9, y: 0, w: 3, h: 6 },
-  { i: 'greeting', x: 6, y: 3, w: 3, h: 3 },
-  { i: 'spotify',  x: 0, y: 6, w: 6, h: 3 },
-  { i: 'news',     x: 6, y: 6, w: 6, h: 3 },
-  { i: 'crypto',   x: 0, y: 9, w: 4, h: 3 },
-  { i: 'stocks',   x: 4, y: 9, w: 4, h: 3 },
-  { i: 'sports',   x: 8, y: 9, w: 4, h: 3 },
-];
-
-const DEFAULT5_KEY = ['clock', 'date', 'greeting', 'weather', 'spotify'].sort().join(',');
-const ALL9_KEY = COMPOSITION_ALL9.map((p) => p.i).sort().join(',');
-
-/** Tile an arbitrary set of widgets across the full 12×12 grid. */
-function flowLayout(ids) {
-  const n = ids.length;
-  if (n === 0) return [];
-  const perRow = n <= 2 ? n : n <= 6 ? 2 : 3;
-  const rows = Math.ceil(n / perRow);
+/**
+ * Pack every widget at minimum size, left→right then top→bottom. Rows wrap at
+ * the grid width, and the last shelf is clamped to the grid height so nothing
+ * can land off-screen (clamping may overlap — that's allowed and preferable to
+ * a widget the user can't see).
+ */
+function packMinSizes(ids) {
   const out = [];
-  for (let idx = 0; idx < n; idx += 1) {
-    const r = Math.floor(idx / perRow);
-    const c = idx % perRow;
-    // last row may have fewer items — stretch them to fill the width
-    const itemsInRow = r === rows - 1 ? n - r * perRow : perRow;
-    const w = Math.floor(GRID_COLS / itemsInRow);
-    const h = Math.floor(GRID_ROWS / rows);
+  let cursorX = 0;
+  let shelfY = 0;
+  let shelfH = 0;
+
+  for (const id of ids) {
+    const { w, h } = getMinSize(id);
+
+    // wrap to the next shelf when this widget would run past the right edge
+    if (cursorX + w > GRID_COLS && cursorX > 0) {
+      shelfY += shelfH;
+      cursorX = 0;
+      shelfH = 0;
+    }
+
     out.push({
-      i: ids[idx],
-      x: c * w,
-      y: r * h,
-      w: c === itemsInRow - 1 ? GRID_COLS - c * w : w,
-      h: r === rows - 1 ? GRID_ROWS - r * h : h,
+      i: id,
+      x: Math.min(cursorX, GRID_COLS - w),
+      y: Math.max(0, Math.min(shelfY, GRID_ROWS - h)),
+      w,
+      h,
     });
+
+    cursorX += w;
+    shelfH = Math.max(shelfH, h);
   }
+
   return out;
 }
 
@@ -348,18 +346,15 @@ function withConstraints(positions) {
 }
 
 /**
- * Return the default layout for a set of enabled widget ids. Known default sets
- * get a hand-tuned full-bleed composition; any other set is flow-tiled to fill.
+ * Return the default layout for a set of enabled widget ids: every widget at its
+ * minimum size, packed so the entire set fits inside a single screen.
  */
 export function getDefaultLayout(enabledWidgets) {
   const ids = (enabledWidgets && enabledWidgets.length)
     ? enabledWidgets.filter((id) => WIDGETS[id])
     : Object.keys(WIDGETS);
-  const key = [...ids].sort().join(',');
 
-  if (key === DEFAULT5_KEY) return withConstraints(COMPOSITION_DEFAULT5);
-  if (key === ALL9_KEY) return withConstraints(COMPOSITION_ALL9);
-  return withConstraints(flowLayout(ids));
+  return withConstraints(packMinSizes(ids));
 }
 
 export default WIDGETS;
