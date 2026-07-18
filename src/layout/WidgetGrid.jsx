@@ -181,6 +181,7 @@ export default function WidgetGrid({
   spotifyProps = {},
   widgetConfig = {},
   userName = '',
+  weatherLocation = '',
   reloadTrigger = 0, // changes to this value trigger a layout reload
 }) {
   const [layout, setLayout] = useState(null);
@@ -223,78 +224,58 @@ export default function WidgetGrid({
     layoutRef.current = layout;
   }, [layout]);
 
-  /* ── load persisted layout ── */
-  const loadLayout = useCallback(async () => {
-    try {
-      const saved = await window.electronAPI?.getWidgetLayout?.();
-      const normalizedSaved = normalizeLayout(saved);
-      if (normalizedSaved.length > 0 && isValidLayout(normalizedSaved)) {
-        const loaded = cloneLayout(normalizedSaved);
-        // Align loaded layout with currently enabled widgets
-        const enabledSet = new Set(enabledWidgets);
-        let aligned = loaded.filter((l) => enabledSet.has(l.i));
-        const currentIds = new Set(aligned.map((l) => l.i));
-        const defaultPositions = getDefaultLayout(enabledWidgets);
-        for (const def of defaultPositions) {
-          if (!currentIds.has(def.i) && enabledSet.has(def.i)) {
-            aligned.push(def);
-          }
-        }
-        const finalLayout = normalizeLayout(aligned);
-        setLayout(finalLayout);
-        persistedSignatureRef.current = getLayoutSignature(finalLayout);
-        emitDraftLayout(finalLayout);
-      } else {
-        const fallback = normalizeLayout(getDefaultLayout(enabledWidgets));
-        setLayout(fallback);
-        persistedSignatureRef.current = getLayoutSignature(fallback);
-        emitDraftLayout(fallback);
-      }
-    } catch {
-      const fallback = normalizeLayout(getDefaultLayout(enabledWidgets));
-      setLayout(fallback);
-      persistedSignatureRef.current = getLayoutSignature(fallback);
-      emitDraftLayout(fallback);
-    }
-  }, [enabledWidgets, emitDraftLayout]);
-
-  /* ── initial mount and reload trigger ── */
+  /* ── Load and align layout whenever enabledWidgets or reloadTrigger changes ── */
   useEffect(() => {
     let active = true;
-    (async () => {
-      await loadLayout();
-      if (active) setMounted(true);
-    })();
-    return () => { active = false; };
-  }, [loadLayout, reloadTrigger]);
 
-  /* ── when enabledWidgets change, add missing items & remove disabled ones ── */
-  useEffect(() => {
-    const currentLayout = layoutRef.current;
-    if (!Array.isArray(currentLayout)) return;
+    async function init() {
+      try {
+        const saved = await window.electronAPI?.getWidgetLayout?.();
+        if (!active) return;
 
-    const currentIds = new Set(currentLayout.map((l) => l.i));
-    const enabledSet = new Set(enabledWidgets);
+        const normalizedSaved = normalizeLayout(saved);
+        const defaultL = getDefaultLayout(enabledWidgets);
+        let finalLayout = defaultL;
 
-    let updated = currentLayout.filter((l) => enabledSet.has(l.i));
+        if (normalizedSaved.length > 0 && isValidLayout(normalizedSaved)) {
+          const loaded = cloneLayout(normalizedSaved);
+          // Align loaded layout with currently enabled widgets
+          const enabledSet = new Set(enabledWidgets);
+          let aligned = loaded.filter((l) => enabledSet.has(l.i));
+          const currentIds = new Set(aligned.map((l) => l.i));
+          for (const def of defaultL) {
+            if (!currentIds.has(def.i) && enabledSet.has(def.i)) {
+              aligned.push(def);
+            }
+          }
+          finalLayout = normalizeLayout(aligned);
+        } else {
+          finalLayout = normalizeLayout(defaultL);
+        }
 
-    // add new widgets that aren't in the current layout
-    const defaultPositions = getDefaultLayout(enabledWidgets);
-    for (const def of defaultPositions) {
-      if (!currentIds.has(def.i) && enabledSet.has(def.i)) {
-        updated.push(def);
+        if (active) {
+          setLayout(finalLayout);
+          persistedSignatureRef.current = getLayoutSignature(finalLayout);
+          emitDraftLayout(finalLayout);
+          setMounted(true);
+        }
+      } catch (err) {
+        console.error('Failed to load widget layout:', err);
+        if (active) {
+          const fallback = normalizeLayout(getDefaultLayout(enabledWidgets));
+          setLayout(fallback);
+          persistedSignatureRef.current = getLayoutSignature(fallback);
+          emitDraftLayout(fallback);
+          setMounted(true);
+        }
       }
     }
 
-    if (
-      updated.length !== currentLayout.length
-      || updated.some((u, i) => u.i !== currentLayout[i]?.i)
-    ) {
-      const normalized = normalizeLayout(updated);
-      setLayout(normalized);
-      emitDraftLayout(normalized);
-    }
-  }, [enabledWidgets, emitDraftLayout]);
+    init();
+    return () => {
+      active = false;
+    };
+  }, [enabledWidgets, reloadTrigger, emitDraftLayout]);
 
   const persistLayout = useCallback(async (nextLayout) => {
     if (!editMode) return;
@@ -432,7 +413,7 @@ export default function WidgetGrid({
     }
     if (item.i === 'weather') {
       widgetProps.useFahrenheit = cfg.useFahrenheit ?? false;
-      if (cfg.city) widgetProps.city = cfg.city;
+      widgetProps.city = cfg.city || weatherLocation;
     }
     if (item.i === 'spotify') {
       widgetProps.pollInterval = cfg.pollInterval ?? 3;
@@ -496,7 +477,6 @@ export default function WidgetGrid({
         compactType={null}
         allowOverlap
         preventCollision={false}
-        isBounded
         onLayoutChange={handleLayoutChange}
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}

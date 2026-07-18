@@ -133,6 +133,7 @@ export default function SettingsApp() {
     useState(true);
   const [screensaverDisplayIds, setScreensaverDisplayIds] = useState([]);
   const [autostart, setAutostart] = useState(false);
+  const [weatherLocation, setWeatherLocation] = useState('');
 
   const allWidgets = useMemo(() => getAllWidgets(), []);
 
@@ -185,6 +186,7 @@ export default function SettingsApp() {
         );
         setAvailableDisplays(Array.isArray(displays) ? displays : []);
         setAutostart(Boolean(settings.autostart));
+        setWeatherLocation(settings.weatherLocation ?? '');
 
         if (Array.isArray(savedWidgets) && savedWidgets.length > 0) {
           setEnabledWidgets(savedWidgets);
@@ -322,6 +324,7 @@ export default function SettingsApp() {
         cryptoCoinIds,
         sportsLeagues,
         autostart,
+        weatherLocation,
       });
 
       // Save enabled widgets separately
@@ -939,6 +942,25 @@ export default function SettingsApp() {
               </div>
 
               <div className="space-y-6">
+                {/* Weather Location */}
+                <div>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                    Weather Location
+                  </label>
+                  <p className="text-xs text-ink-tertiary mb-2">
+                    City name or location (e.g. "Paris", "New York", "Cuttack"). Falls back to auto IP-detection if empty.
+                  </p>
+                  <input
+                    type="text"
+                    value={weatherLocation}
+                    onChange={(e) => setWeatherLocation(e.target.value)}
+                    placeholder="Enter city or location"
+                    className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors placeholder:text-ink-tertiary"
+                  />
+                </div>
+
+                <hr className="border-[color:var(--ab-rule)]" />
+
                 {/* GNews API Key */}
                 <div>
                   <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">

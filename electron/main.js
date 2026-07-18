@@ -49,6 +49,7 @@ async function initStore() {
         cryptoCoinIds: 'bitcoin,ethereum,solana,binancecoin,cardano',
         sportsLeagues: '4387,4328',
         autostart: false,
+        weatherLocation: '',
       },
     });
   } catch (err) {
@@ -66,6 +67,7 @@ async function initStore() {
       screensaverUseAllDisplays: true,
       screensaverDisplayIds: [],
       autostart: false,
+      weatherLocation: '',
     };
     store = {
       get: (key, def) => (key in mem ? mem[key] : def),
@@ -453,6 +455,7 @@ function setupIPC() {
       cryptoCoinIds: store ? store.get('cryptoCoinIds', 'bitcoin,ethereum,solana,binancecoin,cardano') : 'bitcoin,ethereum,solana,binancecoin,cardano',
       sportsLeagues: store ? store.get('sportsLeagues', '4387,4328') : '4387,4328',
       autostart: store ? store.get('autostart', false) : false,
+      weatherLocation: store ? store.get('weatherLocation', '') : '',
     };
   });
 
@@ -537,6 +540,9 @@ function setupIPC() {
       } catch (err) {
         console.error('Failed to set login item settings:', err);
       }
+    }
+    if (data.weatherLocation !== undefined) {
+      store.set('weatherLocation', String(data.weatherLocation));
     }
     return { success: true };
   });

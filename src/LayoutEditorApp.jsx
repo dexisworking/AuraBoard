@@ -14,6 +14,7 @@ export default function LayoutEditorApp() {
   const [uiTheme, setUiTheme] = useState('aurora');
   const [uiFont, setUiFont] = useState('outfit');
   const [userName, setUserName] = useState('');
+  const [weatherLocation, setWeatherLocation] = useState('');
   const [widgetConfig, setWidgetConfig] = useState({});
   const [isClosing, setIsClosing] = useState(false);
   const [showWidgetManager, setShowWidgetManager] = useState(false);
@@ -38,6 +39,7 @@ export default function LayoutEditorApp() {
         setUiTheme(settings?.uiTheme ?? 'aurora');
         setUiFont(settings?.uiFont ?? 'outfit');
         setUserName(settings?.userName ?? '');
+        setWeatherLocation(settings?.weatherLocation ?? '');
         setWidgetConfig(savedConfig && typeof savedConfig === 'object' ? savedConfig : {});
       } catch (error) {
         console.error('Failed to load enabled widgets in layout editor:', error);
@@ -213,6 +215,7 @@ export default function LayoutEditorApp() {
           enabledWidgets={enabledWidgets}
           widgetConfig={widgetConfig}
           userName={userName}
+          weatherLocation={weatherLocation}
           onRemoveWidget={handleRemoveWidget}
           onLayoutDraftChange={handleLayoutDraftChange}
         />

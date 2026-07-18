@@ -23,6 +23,7 @@ export default function App() {
   ]);
   const [widgetConfig, setWidgetConfig] = useState({});
   const [userName, setUserName] = useState('');
+  const [weatherLocation, setWeatherLocation] = useState('');
 
   useEffect(() => {
     let cleanup = null;
@@ -73,6 +74,7 @@ export default function App() {
         setUiTheme(settings.uiTheme ?? 'aurora');
         setUiFont(settings.uiFont ?? 'outfit');
         setUserName(settings.userName ?? '');
+        setWeatherLocation(settings.weatherLocation ?? '');
         setWidgetConfig(savedConfig && typeof savedConfig === 'object' ? savedConfig : {});
 
         if (Array.isArray(savedWidgets) && savedWidgets.length > 0) {
@@ -196,7 +198,7 @@ export default function App() {
   return (
     <div
       className={`
-        fixed inset-0 flex
+        fixed inset-0
         transition-opacity duration-1000 ease-in-out
         ${isActive ? 'opacity-100' : 'opacity-0'}
       `}
@@ -221,6 +223,7 @@ export default function App() {
           enabledWidgets={enabledWidgets}
           widgetConfig={widgetConfig}
           userName={userName}
+          weatherLocation={weatherLocation}
           onRemoveWidget={handleRemoveWidget}
           spotifyProps={{ onTrackUpdate: setSpotifyTrack }}
           reloadTrigger={isActive ? 1 : 0}
