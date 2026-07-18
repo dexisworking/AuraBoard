@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import GradientBackground from './GradientBackground';
 
 const TRANSITION_MS = 1500;
+/** Hard ceiling on how long a single video slide holds the screen. */
+const VIDEO_MAX_MS = 15_000;
+
+/** toMediaUrl keeps the real extension on the URL, so a suffix test is enough. */
+function isVideoSrc(src) {
+  return typeof src === 'string' && /\.(mp4|m4v|webm|mov)$/i.test(src);
+}
 const KEN_BURNS_VARIANTS = [
   'auraboard-pan-right',
   'auraboard-pan-left',
@@ -70,12 +77,71 @@ function reducer(state, action) {
 }
 
 function preloadImage(src) {
-  if (!src || typeof window === 'undefined') {
+  if (!src || typeof window === 'undefined' || isVideoSrc(src)) {
     return;
   }
 
   const image = new window.Image();
   image.src = src;
+}
+
+/**
+ * One slide layer — <img> or a muted <video>.
+ *
+ * Muting is done in the ref, not with props. React's `muted` prop sets the DOM
+ * *property* but never the *attribute*, and `defaultMuted` is not a recognised
+ * React prop at all (it warns and is dropped). Since autoplay policy keys off
+ * the attribute, both have to be set by hand — an unmuted slideshow would blast
+ * sound over a screensaver, and would also get its autoplay blocked.
+ *
+ * play() is called explicitly too: muted autoplay is normally permitted, but
+ * relying on it silently leaves a frozen first frame wherever it isn't.
+ */
+function SlideMedia({ src, animation, durationS, onVideoDuration }) {
+  const setupVideo = useCallback((el) => {
+    if (!el) return;
+    el.muted = true;
+    el.defaultMuted = true;
+    el.setAttribute('muted', '');
+    el.volume = 0;
+    const played = el.play();
+    if (played?.catch) played.catch(() => { /* first frame stays up */ });
+  }, []);
+
+  const style = {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    transformOrigin: 'center center',
+    // Video carries its own motion; a Ken Burns pan on top reads as a wobble.
+    animation: animation ? `${animation} ${durationS}s linear forwards` : undefined,
+    willChange: 'transform, opacity',
+    userSelect: 'none',
+  };
+
+  if (isVideoSrc(src)) {
+    return (
+      <video
+        ref={setupVideo}
+        src={src}
+        muted
+        autoPlay
+        playsInline
+        controls={false}
+        disablePictureInPicture
+        preload="auto"
+        onLoadedMetadata={(e) => {
+          const seconds = e.currentTarget.duration;
+          if (Number.isFinite(seconds) && seconds > 0) onVideoDuration?.(seconds * 1000);
+        }}
+        style={style}
+      />
+    );
+  }
+
+  return <img src={src} alt="" draggable="false" style={style} />;
 }
 
 export default function SlideshowBackground({
@@ -91,6 +157,7 @@ export default function SlideshowBackground({
     createInitialState(initialImages, shuffle),
   );
   const transitionTimeoutRef = useRef(null);
+  const [videoDurationMs, setVideoDurationMs] = useState(null);
   const currentIndex = safeImages.length ? state.currentIndex % safeImages.length : 0;
   const nextIndex = safeImages.length ? state.nextIndex % safeImages.length : 0;
 
@@ -105,6 +172,21 @@ export default function SlideshowBackground({
 
     preloadImage(safeImages[nextIndex]);
   }, [nextIndex, safeImages]);
+
+  /* How long the CURRENT slide holds the screen. Images use the configured
+     interval; videos use their own length capped at 15s, so a short clip does
+     not sit frozen on its last frame for the rest of a long interval. The real
+     length only arrives with loadedmetadata, so we start at the cap and shorten
+     once it is known. */
+  const currentIsVideo = isVideoSrc(safeImages[currentIndex]);
+  const dwellMs = currentIsVideo
+    ? Math.min(VIDEO_MAX_MS, videoDurationMs ?? VIDEO_MAX_MS)
+    : Math.max(1, interval) * 1000;
+
+  // A new slide invalidates the previous clip's measured duration.
+  useEffect(() => {
+    setVideoDurationMs(null);
+  }, [currentIndex]);
 
   useEffect(() => {
     if (safeImages.length <= 1 || state.isTransitioning) {
@@ -122,12 +204,12 @@ export default function SlideshowBackground({
           shuffle,
         });
       }, TRANSITION_MS);
-    }, Math.max(1, interval) * 1000);
+    }, dwellMs);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [interval, nextIndex, safeImages, shuffle, state.isTransitioning]);
+  }, [dwellMs, nextIndex, safeImages, shuffle, state.isTransitioning]);
 
   useEffect(() => {
     return () => {
@@ -238,24 +320,23 @@ export default function SlideshowBackground({
                 : 'var(--ab-photo-filter, none)',
           }}
         >
-          <img
-            key={`current-${state.currentKey}-${currentIndex}`}
-            src={currentImage}
-            alt=""
-            draggable="false"
+          <div
             style={{
               position: 'absolute',
               top: '-1vh',
               left: '-1vw',
               width: '102vw',
               height: '102vh',
-              objectFit: 'cover',
-              transformOrigin: 'center center',
-              animation: `${state.currentAnimation} ${Math.max(2, interval)}s linear forwards`,
-              willChange: 'transform, opacity',
-              userSelect: 'none',
             }}
-          />
+          >
+            <SlideMedia
+              key={`current-${state.currentKey}-${currentIndex}`}
+              src={currentImage}
+              animation={currentIsVideo ? null : state.currentAnimation}
+              durationS={Math.max(2, interval)}
+              onVideoDuration={setVideoDurationMs}
+            />
+          </div>
 
           {incomingImage && (
             <div
@@ -271,22 +352,11 @@ export default function SlideshowBackground({
                 ...incomingStyle,
               }}
             >
-              <img
+              <SlideMedia
                 key={`incoming-${state.incomingKey}-${state.incomingIndex}`}
                 src={incomingImage}
-                alt=""
-                draggable="false"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  transformOrigin: 'center center',
-                  animation: `${state.incomingAnimation} ${Math.max(2, interval)}s linear forwards`,
-                  willChange: 'transform',
-                  userSelect: 'none',
-                }}
+                animation={isVideoSrc(incomingImage) ? null : state.incomingAnimation}
+                durationS={Math.max(2, interval)}
               />
             </div>
           )}

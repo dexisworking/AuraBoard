@@ -1,12 +1,15 @@
 import { app, BrowserWindow, Tray, Menu, ipcMain, powerMonitor, nativeImage, dialog, screen, protocol, net, session, safeStorage } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { Readable } from 'node:stream';
 import { pathToFileURL } from 'node:url';
 import { startAuth, isAuthenticated, disconnectSpotify, getSpotifyUsername } from './spotify-auth.js';
 import * as spotifyApi from './spotify-api.js';
 import RssParser from 'rss-parser';
 import yahooFinance from 'yahoo-finance2';
 import * as providers from './services/providers.js';
+import { getAllPackDirs, getPackDir, isPackId, listPacks } from './packs.js';
 import electronUpdater from 'electron-updater';
 
 const { autoUpdater } = electronUpdater;
@@ -29,10 +32,16 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-/** Encode an absolute path into a media URL the renderer can use as an <img> src. */
+/**
+ * Encode an absolute path into a media URL for the renderer.
+ *
+ * The real extension is appended after the token so the renderer can tell a
+ * video from an image and pick <video> vs <img>. base64url's alphabet is
+ * [A-Za-z0-9_-], so a trailing ".mp4" is never ambiguous with the token itself.
+ */
 function toMediaUrl(absolutePath) {
   const token = Buffer.from(absolutePath, 'utf8').toString('base64url');
-  return `${MEDIA_SCHEME}://f/${token}`;
+  return `${MEDIA_SCHEME}://f/${token}${path.extname(absolutePath).toLowerCase()}`;
 }
 
 /** True when `target` sits inside `root` (prevents ../ escapes). */
@@ -42,20 +51,85 @@ function isInside(root, target) {
   return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
+/**
+ * Roots the media protocol will serve from: the user's own slideshow folder
+ * plus the built-in pack directories. Packs must be listed explicitly — the
+ * handler is an allowlist, so without this every pack image would 403.
+ */
+function getAllowedMediaRoots() {
+  const roots = getAllPackDirs({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+  });
+  const userFolder = store ? store.get('slideshowFolder', '') : '';
+  if (userFolder) roots.push(userFolder);
+  return roots;
+}
+
+/**
+ * Serve a video with byte-range support. Chromium issues a Range request for
+ * <video> and will refuse to play (or refuse to seek) if the response is always
+ * a plain 200, so this has to be handled explicitly rather than deferring to
+ * net.fetch the way images do.
+ */
+async function serveVideo(filePath, ext, request) {
+  const { size } = await fs.stat(filePath);
+  const type = VIDEO_MIME[ext] ?? 'video/mp4';
+  const range = request.headers.get('Range');
+
+  if (!range) {
+    return new Response(Readable.toWeb(createReadStream(filePath)), {
+      status: 200,
+      headers: {
+        'Content-Type': type,
+        'Content-Length': String(size),
+        'Accept-Ranges': 'bytes',
+      },
+    });
+  }
+
+  const match = /bytes=(\d*)-(\d*)/.exec(range);
+  const start = match?.[1] ? Number.parseInt(match[1], 10) : 0;
+  const requestedEnd = match?.[2] ? Number.parseInt(match[2], 10) : size - 1;
+
+  if (!Number.isFinite(start) || start >= size || start < 0) {
+    return new Response(null, {
+      status: 416,
+      headers: { 'Content-Range': `bytes */${size}` },
+    });
+  }
+
+  const end = Math.min(Number.isFinite(requestedEnd) ? requestedEnd : size - 1, size - 1);
+  return new Response(Readable.toWeb(createReadStream(filePath, { start, end })), {
+    status: 206,
+    headers: {
+      'Content-Type': type,
+      'Content-Length': String(end - start + 1),
+      'Content-Range': `bytes ${start}-${end}/${size}`,
+      'Accept-Ranges': 'bytes',
+    },
+  });
+}
+
 function registerMediaProtocol() {
   protocol.handle(MEDIA_SCHEME, async (request) => {
     try {
-      const token = new URL(request.url).pathname.replace(/^\/+/, '');
+      // toMediaUrl appends the real extension after the token; strip it back off
+      // before decoding (base64url never contains a dot).
+      const raw = new URL(request.url).pathname.replace(/^\/+/, '');
+      const token = raw.replace(/\.[a-z0-9]+$/i, '');
       const filePath = Buffer.from(decodeURIComponent(token), 'base64url').toString('utf8');
-      const allowedRoot = store ? store.get('slideshowFolder', '') : '';
 
-      // Only ever serve files from inside the configured slideshow folder.
-      if (!isInside(allowedRoot, filePath)) {
+      // Only ever serve files from inside an allowed root.
+      if (!getAllowedMediaRoots().some((root) => isInside(root, filePath))) {
         return new Response('Forbidden', { status: 403 });
       }
       const ext = path.extname(filePath).toLowerCase();
-      if (!IMAGE_EXTENSIONS.has(ext)) {
+      if (!MEDIA_EXTENSIONS.has(ext)) {
         return new Response('Unsupported media type', { status: 415 });
+      }
+      if (VIDEO_EXTENSIONS.has(ext)) {
+        return await serveVideo(filePath, ext, request);
       }
       return await net.fetch(pathToFileURL(filePath).href);
     } catch {
@@ -73,6 +147,9 @@ const CSP = [
   isDev ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'" : "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${MEDIA_SCHEME}: https:`,
+  // Slideshow videos are served over the media scheme; without an explicit
+  // media-src they fall back to default-src 'self' and every <video> is blocked.
+  `media-src 'self' blob: ${MEDIA_SCHEME}:`,
   "font-src 'self' data:",
   [
     "connect-src 'self'",
@@ -91,8 +168,27 @@ const CSP = [
   "frame-src 'none'",
 ].join('; ');
 
+/**
+ * Only AuraBoard's own documents get our CSP. This hook runs on the whole
+ * defaultSession, so without this check it also stamped `default-src 'self'` /
+ * `script-src 'self'` onto THIRD-PARTY pages — which rendered the Spotify
+ * OAuth window (accounts.spotify.com, scripts + styles on its own CDNs)
+ * completely blank. Our CSP describes our renderer, not the whole web.
+ */
+function isOwnContent(url) {
+  if (!url) return false;
+  if (url.startsWith('file://')) return true;
+  if (url.startsWith(`${MEDIA_SCHEME}://`)) return true;
+  if (isDev && /^http:\/\/(localhost|127\.0\.0\.1):517\d/.test(url)) return true;
+  return false;
+}
+
 function applyCsp() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (!isOwnContent(details.url)) {
+      callback({}); // leave third-party responses untouched
+      return;
+    }
     callback({
       responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [CSP] },
     });
@@ -184,6 +280,15 @@ let layoutEditorWindow = null; // Phase 5.1 layout editor window
 let tray = null;
 let idleCheckInterval = null;
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']);
+/** Formats Chromium plays natively in Electron. .mov is h264 often enough to include. */
+const VIDEO_MIME = {
+  '.mp4': 'video/mp4',
+  '.m4v': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/mp4',
+};
+const VIDEO_EXTENSIONS = new Set(Object.keys(VIDEO_MIME));
+const MEDIA_EXTENSIONS = new Set([...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS]);
 
 // ── Initialize electron-store (ESM module, must use dynamic import) ───
 async function initStore() {
@@ -193,6 +298,9 @@ async function initStore() {
       defaults: {
         idleTimeout: 5, // minutes
         slideshowFolder: '',
+        // Active background source: '' = the user's own slideshowFolder, or a
+        // built-in pack id ('cinematic' | 'anime' | 'superheroes').
+        slideshowPack: '',
         slideshowInterval: 60,
         slideshowTransition: 'fade',
         slideshowShuffle: false,
@@ -250,7 +358,23 @@ async function initStore() {
   }
 }
 
-async function scanImageDirectory(folderPath) {
+/**
+ * The folder the slideshow should read from right now: a built-in pack when one
+ * is selected, otherwise the user's own folder. A pack id that no longer exists
+ * falls back to the user folder rather than showing nothing.
+ */
+function getActiveSlideshowDir() {
+  const packId = store ? store.get('slideshowPack', '') : '';
+  if (isPackId(packId)) {
+    return getPackDir(packId, {
+      isPackaged: app.isPackaged,
+      resourcesPath: process.resourcesPath,
+    });
+  }
+  return store ? store.get('slideshowFolder', '') : '';
+}
+
+async function scanMediaDirectory(folderPath) {
   if (!folderPath) {
     return [];
   }
@@ -273,7 +397,7 @@ async function scanImageDirectory(folderPath) {
       }
 
       const extension = path.extname(entry.name).toLowerCase();
-      if (IMAGE_EXTENSIONS.has(extension)) {
+      if (MEDIA_EXTENSIONS.has(extension)) {
         images.push(toMediaUrl(fullPath));
       }
     }
@@ -612,6 +736,7 @@ function setupIPC() {
     return {
       idleTimeout: store ? store.get('idleTimeout', 5) : 5,
       slideshowFolder: store ? store.get('slideshowFolder', '') : '',
+      slideshowPack: store ? store.get('slideshowPack', '') : '',
       slideshowInterval: store ? store.get('slideshowInterval', 60) : 60,
       slideshowTransition: store ? store.get('slideshowTransition', 'fade') : 'fade',
       slideshowShuffle: store ? store.get('slideshowShuffle', false) : false,
@@ -768,21 +893,34 @@ function setupIPC() {
     }
 
     const folderPath = result.filePaths[0];
-    const images = await scanImageDirectory(folderPath);
+    const images = await scanMediaDirectory(folderPath);
 
     if (store) {
       store.set('slideshowFolder', folderPath);
+      // Choosing your own folder switches off any active built-in pack —
+      // otherwise the pack would keep winning and the picker would look broken.
+      store.set('slideshowPack', '');
     }
 
     return images;
   });
 
   ipcMain.handle('get-folder-images', async () => {
-    const folderPath = store ? store.get('slideshowFolder', '') : '';
-    console.log('[DEBUG] get-folder-images using path:', folderPath);
-    const images = await scanImageDirectory(folderPath);
-    console.log('[DEBUG] found', images.length, 'images in', folderPath);
-    return images;
+    const folderPath = getActiveSlideshowDir();
+    return scanMediaDirectory(folderPath);
+  });
+
+  // ── Built-in slideshow packs ──────────────────────────────────────────
+  ipcMain.handle('list-slideshow-packs', async () => {
+    const ctx = { isPackaged: app.isPackaged, resourcesPath: process.resourcesPath };
+    return listPacks(ctx, (dir) => scanMediaDirectory(dir));
+  });
+
+  /** Select a built-in pack, or pass '' to go back to the user's own folder. */
+  ipcMain.handle('set-slideshow-pack', async (_event, packId) => {
+    const next = isPackId(packId) ? packId : '';
+    if (store) store.set('slideshowPack', next);
+    return scanMediaDirectory(getActiveSlideshowDir());
   });
 
   ipcMain.on('dismiss-screensaver', () => {
@@ -908,9 +1046,11 @@ function setupIPC() {
             leagueNames: params.leagueNames || {},
           });
         case 'calendar':
-          return await providers.getCalendar({
-            icsUrl: params.icsUrl ?? (store ? store.get('calendarUrl', '') : ''),
-          });
+          // Single source of truth: widgetConfig.calendar.icsUrl, written by
+          // both the Layout Editor and Settings and passed down as a prop. The
+          // old `calendarUrl` store fallback here was dead — nothing ever wrote
+          // that key, and `??` never fired because the widget passes ''.
+          return await providers.getCalendar({ icsUrl: params.icsUrl ?? '' });
         case 'system':
           return { data: providers.getSystemStats(), error: null, fetchedAt: Date.now(), isStale: false };
         default:

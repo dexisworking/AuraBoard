@@ -42,3 +42,8 @@ _probe.cjs
 _capture.cjs
 _capture.log
 _shot.png
+
+# Built-in slideshow pack images — populated by `npm run packs:sync`, bundled
+# into the installer as extraResources. Never committed: third-party artwork
+# and ~121 MB. See electron/packs.js.
+packs/

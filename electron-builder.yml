@@ -43,3 +43,10 @@ extraResources:
     filter:
       - "**/*"
       - "!icon-src.html"
+  # Built-in slideshow packs. `packs/` is gitignored but populated automatically
+  # by `build:win` (which runs `packs:sync` first), so packs ship by default.
+  # If a source folder is missing the build still succeeds with that pack empty.
+  - from: packs/
+    to: packs/
+    filter:
+      - "**/*"

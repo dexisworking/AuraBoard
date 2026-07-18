@@ -35,6 +35,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   /**
+   * Built-in slideshow packs with their current image counts.
+   * @returns {Promise<Array<{id:string,name:string,description:string,count:number}>>}
+   */
+  listSlideshowPacks: async () => {
+    return await ipcRenderer.invoke('list-slideshow-packs');
+  },
+
+  /**
+   * Activate a built-in pack, or pass '' to return to the user's own folder.
+   * @param {string} packId
+   * @returns {Promise<string[]>} images for the newly active source
+   */
+  setSlideshowPack: async (packId) => {
+    return await ipcRenderer.invoke('set-slideshow-pack', packId);
+  },
+
+  /**
    * Register a callback for when the screensaver should activate.
    * @param {() => void} callback
    * @returns {() => void} cleanup function to remove the listener

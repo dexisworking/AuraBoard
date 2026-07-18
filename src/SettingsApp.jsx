@@ -97,6 +97,10 @@ const LEAGUE_OPTIONS = [
 export default function SettingsApp() {
   const [idleTimeout, setIdleTimeout] = useState(5);
   const [slideshowFolder, setSlideshowFolder] = useState('');
+  // '' = the user's own folder is active; otherwise a built-in pack id.
+  const [slideshowPack, setSlideshowPack] = useState('');
+  const [packs, setPacks] = useState([]);
+  const [switchingPack, setSwitchingPack] = useState('');
   const [images, setImages] = useState([]);
   const [slideshowInterval, setSlideshowInterval] = useState(60);
   const [slideshowTransition, setSlideshowTransition] = useState('fade');
@@ -135,6 +139,11 @@ export default function SettingsApp() {
   const [screensaverDisplayIds, setScreensaverDisplayIds] = useState([]);
   const [autostart, setAutostart] = useState(false);
   const [weatherLocation, setWeatherLocation] = useState('');
+  // Calendar's .ics URL is per-widget config, not a top-level setting. We keep
+  // the whole widgetConfig map so saving here can't clobber other widgets'
+  // settings (or Calendar's own variant/use24hr) written by the Layout Editor.
+  const [widgetConfig, setWidgetConfig] = useState({});
+  const [calendarIcsUrl, setCalendarIcsUrl] = useState('');
   const [photoTreatment, setPhotoTreatment] = useState('mono');
   const [timeOfDayPalette, setTimeOfDayPalette] = useState(false);
   const [posterMomentInterval, setPosterMomentInterval] = useState(0);
@@ -148,12 +157,14 @@ export default function SettingsApp() {
 
     async function loadSettings() {
       try {
-        const [settings, folderImages, savedWidgets, displays] =
+        const [settings, folderImages, savedWidgets, displays, savedWidgetConfig, packList] =
           await Promise.all([
             window.electronAPI?.getSettings?.() ?? Promise.resolve({}),
             window.electronAPI?.getFolderImages?.() ?? Promise.resolve([]),
             window.electronAPI?.getEnabledWidgets?.() ?? Promise.resolve(null),
             window.electronAPI?.getDisplays?.() ?? Promise.resolve([]),
+            window.electronAPI?.getWidgetConfig?.() ?? Promise.resolve({}),
+            window.electronAPI?.listSlideshowPacks?.() ?? Promise.resolve([]),
           ]);
 
         if (!isMounted) {
@@ -162,6 +173,8 @@ export default function SettingsApp() {
 
         setIdleTimeout(settings.idleTimeout ?? 5);
         setSlideshowFolder(settings.slideshowFolder ?? '');
+        setSlideshowPack(settings.slideshowPack ?? '');
+        setPacks(Array.isArray(packList) ? packList : []);
         setSlideshowInterval(settings.slideshowInterval ?? 60);
         setSlideshowTransition(settings.slideshowTransition ?? 'fade');
         setSlideshowShuffle(Boolean(settings.slideshowShuffle));
@@ -193,6 +206,14 @@ export default function SettingsApp() {
         setAvailableDisplays(Array.isArray(displays) ? displays : []);
         setAutostart(Boolean(settings.autostart));
         setWeatherLocation(settings.weatherLocation ?? '');
+
+        // Same source of truth the Layout Editor writes, so the two windows
+        // never disagree. loadSettings() also re-runs when the editor closes.
+        const cfg = savedWidgetConfig && typeof savedWidgetConfig === 'object'
+          ? savedWidgetConfig
+          : {};
+        setWidgetConfig(cfg);
+        setCalendarIcsUrl(cfg.calendar?.icsUrl ?? '');
         setPhotoTreatment(settings.photoTreatment ?? 'mono');
         setTimeOfDayPalette(Boolean(settings.timeOfDayPalette));
         setPosterMomentInterval(Number(settings.posterMomentInterval) || 0);
@@ -266,6 +287,33 @@ export default function SettingsApp() {
     [images.length],
   );
 
+  /**
+   * Switch the background source. Passing the already-active pack id turns it
+   * off, falling back to the user's own folder — so the row acts as a toggle
+   * and there is always a way back without re-browsing.
+   */
+  const handleSelectPack = async (packId) => {
+    const next = packId === slideshowPack ? '' : packId;
+    setSwitchingPack(packId);
+    setSaveMessage('');
+    try {
+      const nextImages = await window.electronAPI?.setSlideshowPack?.(next);
+      setSlideshowPack(next);
+      setImages(Array.isArray(nextImages) ? nextImages : []);
+      if (!next) {
+        setSaveMessage(slideshowFolder ? 'Using your own folder.' : 'No folder selected yet.');
+      } else if (!nextImages?.length) {
+        setSaveMessage('That pack has no images in this build.');
+      }
+    } catch (error) {
+      console.error('Failed to switch slideshow pack:', error);
+      setSaveMessage('Failed to switch background pack.');
+    } finally {
+      setSwitchingPack('');
+      window.setTimeout(() => setSaveMessage(''), 3000);
+    }
+  };
+
   const handleChooseFolder = async () => {
     setIsSelectingFolder(true);
     setSaveMessage('');
@@ -276,6 +324,9 @@ export default function SettingsApp() {
 
       setImages(Array.isArray(selectedImages) ? selectedImages : []);
       setSlideshowFolder(settings?.slideshowFolder ?? '');
+      // Main clears the active pack when a folder is picked; mirror that here so
+      // the pack row stops showing as selected.
+      setSlideshowPack(settings?.slideshowPack ?? '');
 
       if (Array.isArray(selectedImages) && selectedImages.length > 0) {
         setSaveMessage('Folder selected.');
@@ -347,6 +398,15 @@ export default function SettingsApp() {
 
       // Save enabled widgets separately
       await window.electronAPI?.saveEnabledWidgets?.(enabledWidgets);
+
+      // Calendar URL lives in widgetConfig, not settings. Merge so we preserve
+      // Calendar's other keys (variant, use24hr) and every other widget's config.
+      const nextWidgetConfig = {
+        ...widgetConfig,
+        calendar: { ...(widgetConfig.calendar ?? {}), icsUrl: calendarIcsUrl.trim() },
+      };
+      await window.electronAPI?.saveWidgetConfig?.(nextWidgetConfig);
+      setWidgetConfig(nextWidgetConfig);
 
       setSaveMessage('Settings saved!');
     } catch (error) {
@@ -811,14 +871,69 @@ export default function SettingsApp() {
                     Background
                   </h2>
                   <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-ink-tertiary font-micro">
-                    Configure your local photo slideshow.
+                    Pick a built-in pack, or point at your own folder.
                   </p>
                 </div>
               </div>
 
               <div className="space-y-6">
+                {/* Built-in packs */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-accent mb-3 font-micro font-semibold">
+                    Built-in Packs
+                  </p>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {packs.map((pack) => {
+                      const active = pack.id === slideshowPack;
+                      const empty = pack.count === 0;
+                      const busy = switchingPack === pack.id;
+                      return (
+                        <button
+                          key={pack.id}
+                          onClick={() => handleSelectPack(pack.id)}
+                          disabled={empty || Boolean(switchingPack)}
+                          title={empty
+                            ? 'This build ships without images for this pack. Run "npm run packs:sync" and rebuild.'
+                            : pack.description}
+                          className="text-left border p-4 transition-colors disabled:cursor-not-allowed"
+                          style={{
+                            borderColor: active ? 'var(--ab-accent)' : 'var(--ab-surface-border)',
+                            background: active ? 'var(--ab-accent)' : 'transparent',
+                            color: active ? 'var(--ab-accent-ink)' : 'var(--ab-ink)',
+                            opacity: empty ? 0.45 : 1,
+                          }}
+                        >
+                          <span className="block text-[12px] font-semibold uppercase tracking-[0.1em]">
+                            {pack.name}
+                          </span>
+                          <span
+                            className="block text-[10px] uppercase tracking-[0.1em] font-micro mt-1"
+                            style={{ color: active ? 'var(--ab-accent-ink)' : 'var(--ab-ink-tertiary)' }}
+                          >
+                            {busy
+                              ? 'Switching…'
+                              : empty
+                                ? 'Not in this build'
+                                : `${pack.count} image${pack.count === 1 ? '' : 's'}`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {slideshowPack && (
+                    <p className="text-xs text-ink-tertiary mt-2">
+                      Click the active pack again to go back to your own folder.
+                    </p>
+                  )}
+                </div>
+
+                <hr className="border-[color:var(--ab-rule)]" />
+
                 {/* Folder Selection */}
-                <div className="bg-ground p-5 border border-[color:var(--ab-surface-border)]">
+                <div
+                  className="bg-ground p-5 border border-[color:var(--ab-surface-border)]"
+                  style={{ opacity: slideshowPack ? 0.5 : 1 }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex-1 truncate pr-4">
                       <p className="text-xs font-semibold uppercase tracking-wider text-ink-tertiary mb-1">
@@ -828,7 +943,7 @@ export default function SettingsApp() {
                         {slideshowFolder || 'No folder selected'}
                       </p>
                       <p className="text-xs text-ink-tertiary mt-1">
-                        {imageCountLabel}
+                        {slideshowPack ? 'Overridden by the selected pack' : imageCountLabel}
                       </p>
                     </div>
                     <button
@@ -1049,6 +1164,31 @@ export default function SettingsApp() {
                     placeholder="Enter city or location"
                     className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors placeholder:text-ink-tertiary"
                   />
+                </div>
+
+                <hr className="border-[color:var(--ab-rule)]" />
+
+                {/* Calendar .ics URL — mirrors the Layout Editor's Calendar
+                    field; both write widgetConfig.calendar.icsUrl. */}
+                <div>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                    Calendar URL
+                  </label>
+                  <p className="text-xs text-ink-tertiary mb-2">
+                    Secret address in iCal format (.ics) for a subscribed calendar. Google Calendar: Settings → your calendar → "Secret address in iCal format".
+                  </p>
+                  <input
+                    type="text"
+                    value={calendarIcsUrl}
+                    onChange={(e) => setCalendarIcsUrl(e.target.value)}
+                    placeholder="https://…/basic.ics"
+                    className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors placeholder:text-ink-tertiary"
+                  />
+                  {!enabledWidgets.includes('calendar') && (
+                    <p className="text-xs text-ink-tertiary mt-2">
+                      The Calendar widget is currently off — enable it in the Layout Editor to see this on the board.
+                    </p>
+                  )}
                 </div>
 
                 <hr className="border-[color:var(--ab-rule)]" />

@@ -8,8 +8,9 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "build:win": "electron-vite build && electron-builder --win",
+    "build:win": "npm run packs:sync && electron-vite build && electron-builder --win",
     "preview": "electron-vite preview",
+    "packs:sync": "node scripts/sync-packs.mjs",
     "lint": "eslint ."
   },
   "dependencies": {

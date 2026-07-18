@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import WidgetHeader from '../../ui/WidgetHeader';
 import '../../ui/primitives.css';
 
@@ -22,38 +22,153 @@ function moonState(date = new Date()) {
   return { age, phase, illumination, name: PHASE_NAMES[index], index };
 }
 
+const R = 42;   // disc radius in viewBox units
+const C = 50;   // disc centre
+const HALO = 50; // outer glow reach
+
+/* Maria — the dark basalt plains, loosely following the real near-side layout
+   (Imbrium/Serenitatis upper left, Tranquillitatis centre right, Procellarum
+   lower left). Irregular overlapping ELLIPSES, not circles: equal-sized discs
+   read as polka dots and flatten the sphere. */
+const MARIA = [
+  { x: 41, y: 32, rx: 11,  ry: 7.5, a: -22, o: 0.16 },
+  { x: 34, y: 39, rx: 6.5, ry: 5,   a: 10,  o: 0.13 },
+  { x: 55, y: 26, rx: 6,   ry: 4,   a: 28,  o: 0.12 },
+  { x: 59, y: 52, rx: 10,  ry: 7,   a: 16,  o: 0.14 },
+  { x: 52, y: 58, rx: 5.5, ry: 4.5, a: -30, o: 0.10 },
+  { x: 34, y: 58, rx: 7,   ry: 5,   a: -14, o: 0.11 },
+  { x: 29, y: 48, rx: 4.5, ry: 6,   a: 8,   o: 0.08 },
+  { x: 66, y: 40, rx: 4,   ry: 2.8, a: 40,  o: 0.09 },
+  { x: 47, y: 43, rx: 3.2, ry: 2.4, a: 0,   o: 0.08 },
+  { x: 50, y: 67, rx: 5,   ry: 3.2, a: 22,  o: 0.08 },
+  { x: 63, y: 64, rx: 3,   ry: 2.2, a: -18, o: 0.06 },
+];
+
 /**
- * Pure-CSS moon disc: a lit circle with a shadow disc offset across it.
- * Waxing lights the right limb, waning the left.
+ * Moon disc rendered as a shaded sphere.
+ *
+ * Geometry: the terminator is an ELLIPSE whose horizontal semi-axis is
+ * R·cos(θ) — it is not a circle offset across the disc. The previous
+ * two-overlapping-circles approach was only correct at new/full/quarter; every
+ * crescent and gibbous phase had a visibly wrong curve.
+ *
+ * Compositing: the widget sits chromeless on a photo, so nothing here paints an
+ * opaque background colour. Every layer is `--ab-ink` at varying opacity, and
+ * the surface darkening (maria, limb falloff) is done by subtracting from the
+ * MASK rather than painting a dark fill — so it composites correctly over any
+ * photo instead of stamping `--ab-bg` shapes onto it.
  */
-function MoonDisc({ phase, illumination, size = '1em' }) {
+function MoonDisc({ phase, size = '1em' }) {
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const waxing = phase < 0.5;
-  // shadow travels from fully covering (new) to fully clear (full)
-  const offset = (1 - illumination) * 100 * (waxing ? 1 : -1);
+
+  // Horizontal semi-axis of the terminator ellipse. +R at new (terminator sits
+  // on the lit limb, nothing lit) → 0 at quarter (straight edge) → −R at full.
+  // cos is symmetric about phase 0.5, so this holds for waning too; the waning
+  // half is drawn by mirroring, which puts the light on the opposite limb.
+  const a = R * Math.cos(2 * Math.PI * phase);
+  const rx = Math.abs(a).toFixed(3);
+
+  // Lit region: down the terminator from the north pole, back up the lit limb.
+  // Sweep flags follow screen orientation (SVG y grows downward).
+  const litPath = [
+    `M ${C} ${C - R}`,
+    `A ${rx} ${R} 0 0 ${a >= 0 ? 1 : 0} ${C} ${C + R}`,
+    `A ${R} ${R} 0 0 0 ${C} ${C - R}`,
+    'Z',
+  ].join(' ');
+
   return (
-    <div
-      style={{
-        position: 'relative',
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: 'var(--ab-ink)',
-        overflow: 'hidden',
-        flexShrink: 0,
-      }}
+    <svg
+      viewBox="0 0 100 100"
+      width={size}
+      height={size}
+      style={{ flexShrink: 0, overflow: 'visible', display: 'block' }}
+      role="img"
+      aria-label={`Moon, ${Math.round((1 - Math.cos(2 * Math.PI * phase)) / 2 * 100)}% illuminated`}
     >
-      <div
-        style={{
-          position: 'absolute',
-          top: '-2%',
-          left: `${offset}%`,
-          width: '104%',
-          height: '104%',
-          borderRadius: '50%',
-          background: 'var(--ab-bg)',
-        }}
+      <defs>
+        {/* Sphere shading: bright near the sub-solar point, falling off toward
+            the limb. Opacity-only so it works on light and dark themes alike. */}
+        <radialGradient id={`${uid}-sphere`} cx="0.70" cy="0.30" r="0.92">
+          <stop offset="0" stopColor="var(--ab-ink)" stopOpacity="1" />
+          <stop offset="0.40" stopColor="var(--ab-ink)" stopOpacity="0.93" />
+          <stop offset="0.72" stopColor="var(--ab-ink)" stopOpacity="0.72" />
+          <stop offset="0.90" stopColor="var(--ab-ink)" stopOpacity="0.50" />
+          <stop offset="1" stopColor="var(--ab-ink)" stopOpacity="0.33" />
+        </radialGradient>
+
+        {/* Earthshine falls off toward the far limb so the unlit side reads as
+            a shadowed sphere instead of a flat grey disc. */}
+        <radialGradient id={`${uid}-earth`} cx="0.68" cy="0.32" r="0.95">
+          <stop offset="0" stopColor="var(--ab-ink)" stopOpacity="0.064" />
+          <stop offset="0.7" stopColor="var(--ab-ink)" stopOpacity="0.029" />
+          <stop offset="1" stopColor="var(--ab-ink)" stopOpacity="0.008" />
+        </radialGradient>
+
+        {/* Halo. Interior stops are hidden behind the disc; only 84%→100%
+            (r 42→50) is visible, so it reads as a glow, not a wash. */}
+        <radialGradient id={`${uid}-halo`}>
+          <stop offset="0.84" stopColor="var(--ab-ink)" stopOpacity="0.15" />
+          <stop offset="1" stopColor="var(--ab-ink)" stopOpacity="0" />
+        </radialGradient>
+
+        <filter id={`${uid}-soft`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.9" />
+        </filter>
+        <filter id={`${uid}-blurMaria`} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="1.7" />
+        </filter>
+
+        {/* Crisp limb: clips the softened mask so the outer edge stays hard
+            (Swiss) while only the terminator gets a soft falloff. */}
+        <clipPath id={`${uid}-limb`}>
+          <circle cx={C} cy={C} r={R} />
+        </clipPath>
+
+        <mask id={`${uid}-lit`}>
+          <path d={litPath} fill="#fff" filter={`url(#${uid}-soft)`} />
+          <g filter={`url(#${uid}-blurMaria)`}>
+            {MARIA.map((m, i) => (
+              <ellipse
+                key={i}
+                cx={m.x}
+                cy={m.y}
+                rx={m.rx}
+                ry={m.ry}
+                transform={`rotate(${m.a} ${m.x} ${m.y})`}
+                fill="#000"
+                fillOpacity={m.o}
+              />
+            ))}
+          </g>
+        </mask>
+      </defs>
+
+      <circle cx={C} cy={C} r={HALO} fill={`url(#${uid}-halo)`} />
+
+      {/* Earthshine: the unlit disc stays faintly present rather than vanishing,
+          which is what gives the sphere a readable silhouette at crescent. */}
+      <circle cx={C} cy={C} r={R} fill={`url(#${uid}-earth)`} />
+      <circle
+        cx={C}
+        cy={C}
+        r={R}
+        fill="none"
+        stroke="var(--ab-ink)"
+        strokeOpacity="0.11"
+        strokeWidth="0.7"
       />
-    </div>
+
+      <g
+        clipPath={`url(#${uid}-limb)`}
+        transform={waxing ? undefined : `translate(${2 * C}, 0) scale(-1, 1)`}
+      >
+        <g mask={`url(#${uid}-lit)`}>
+          <circle cx={C} cy={C} r={R} fill={`url(#${uid}-sphere)`} />
+        </g>
+      </g>
+    </svg>
   );
 }
 
@@ -99,7 +214,7 @@ export default function MoonWidget({ variant = 'disc' }) {
       <div className="ab-widget-root">
         <WidgetHeader title="Moon" />
         <div className="flex-1 flex items-center min-h-0" style={{ gap: '1em' }}>
-          <MoonDisc phase={phase} illumination={illumination} size="min(34cqh, 34cqw)" />
+          <MoonDisc phase={phase} size="min(34cqh, 34cqw)" />
           <div style={{ minWidth: 0 }}>
             <div className="ab-figure text-ink" style={{ fontSize: '2em', lineHeight: 1 }}>
               {pct}<span className="text-accent">%</span>
@@ -117,7 +232,7 @@ export default function MoonWidget({ variant = 'disc' }) {
     <div className="ab-widget-root">
       <WidgetHeader title="Moon" meta={`${pct}%`} />
       <div className="flex-1 flex flex-col items-center justify-center min-h-0" style={{ gap: '0.6em' }}>
-        <MoonDisc phase={phase} illumination={illumination} size="min(46cqh, 46cqw)" />
+        <MoonDisc phase={phase} size="min(46cqh, 46cqw)" />
         <span className="ab-widget-meta">{name}</span>
       </div>
     </div>
