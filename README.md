@@ -180,6 +180,13 @@ Issues and pull requests are welcome. For a new widget, add an entry to
 its style variants, and any per-instance settings — the layout editor and settings
 UI build themselves from that registry.
 
+## Privacy
+
+AuraBoard has no server, no account, no telemetry and no analytics. Settings stay in
+`%APPDATA%\auraboard\`, and widgets call public APIs directly from your machine — the
+developer receives nothing. See [PRIVACY.md](PRIVACY.md) for the full breakdown of what
+each widget contacts and when.
+
 ## License
 
 [MIT](LICENSE) © dexisworking
