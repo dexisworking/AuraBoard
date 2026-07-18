@@ -55,9 +55,18 @@ visual language rather than the usual widget-soup.
 
 ### Download (recommended)
 
-1. Grab **`AuraBoard-Setup-1.0.0.exe`** from the [latest release](https://github.com/dexisworking/auraboard/releases/latest)
-2. Run it and follow the installer
-3. AuraBoard starts in your system tray — right-click the icon for **Settings**
+Two builds are available on the [latest release](https://github.com/dexisworking/auraboard/releases/latest):
+
+| Installer | Size | Wallpapers |
+|---|---|---|
+| `AuraBoard-Setup-1.0.0.exe` | 80 MB | None — point it at your own folder |
+| `AuraBoard-Setup-1.0.0-predefined.exe` | 498 MB | 4 built-in packs: Cinematic, Anime, Superheroes, Live |
+
+Same application either way — the predefined build just bundles 118 wallpapers
+(106 images plus 12 looping 4K video wallpapers) so it works straight out of the box.
+
+1. Download one and run it
+2. AuraBoard starts in your system tray — right-click the icon for **Settings**
 
 > [!NOTE]
 > **Windows SmartScreen will warn you on first run.** The installer isn't code-signed
@@ -96,8 +105,8 @@ recursively and picks up both images and video.
 ### Wallpaper packs
 
 AuraBoard supports bundled wallpaper packs, shown in **Settings → Background**. The
-public build ships with the pack slots empty (marked *Not in this build*) — no artwork
-is redistributed. To build your own packs into a personal copy:
+predefined installer ships with all four filled; in the standard installer the slots
+appear as *Not in this build*. To build your own packs:
 
 1. Edit the `PACKS` array in [`electron/packs.js`](electron/packs.js) to point at your folders
 2. Run `npm run packs:sync` to copy the media into `packs/`
