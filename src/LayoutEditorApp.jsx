@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import WidgetGrid from './layout/WidgetGrid';
-import { getAllWidgets, getDefaultVariant } from './widgets/registry';
+import { getAllWidgets, getDefaultVariant, getWidgetSettings } from './widgets/registry';
+import WidgetSettingsField from './ui/WidgetSettingsField';
 import { getFontPreset, getThemePreset } from './theme/presets';
 import { applyTheme } from './theme/applyTheme';
 
@@ -53,6 +54,15 @@ export default function LayoutEditorApp() {
   const handleSetVariant = useCallback((widgetId, variantId) => {
     setWidgetConfig((prev) => {
       const next = { ...prev, [widgetId]: { ...(prev[widgetId] || {}), variant: variantId } };
+      void window.electronAPI?.saveWidgetConfig?.(next);
+      return next;
+    });
+  }, []);
+
+  // Change one per-instance setting (timezone, units, target date, …).
+  const handleSetSetting = useCallback((widgetId, key, value) => {
+    setWidgetConfig((prev) => {
+      const next = { ...prev, [widgetId]: { ...(prev[widgetId] || {}), [key]: value } };
       void window.electronAPI?.saveWidgetConfig?.(next);
       return next;
     });
@@ -260,40 +270,63 @@ export default function LayoutEditorApp() {
             })}
           </div>
 
-          {/* ── Variant picker: distinct visual style per enabled widget ── */}
-          {enabledWidgets.some((id) => (allWidgets.find((w) => w.id === id)?.variants?.length > 1)) && (
+          {/* ── Per-widget configuration: style + instance settings ── */}
+          {enabledWidgets.length > 0 && (
             <div className="mt-5 pt-4 border-t" style={{ borderColor: 'var(--ab-rule)' }}>
               <p className="text-[10px] uppercase tracking-[0.22em] text-accent mb-3 font-micro font-semibold">
-                Widget Styles
+                Configure Widgets
               </p>
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {allWidgets
-                  .filter((w) => enabledWidgets.includes(w.id) && (w.variants?.length > 1))
+                  .filter((w) => enabledWidgets.includes(w.id))
                   .map((widget) => {
-                    const activeVariant = widgetConfig[widget.id]?.variant || getDefaultVariant(widget.id);
+                    const cfg = widgetConfig[widget.id] || {};
+                    const activeVariant = cfg.variant || getDefaultVariant(widget.id);
+                    const settings = getWidgetSettings(widget.id);
+                    const hasVariants = (widget.variants?.length ?? 0) > 1;
+                    if (!hasVariants && settings.length === 0) return null;
+
                     return (
-                      <div key={widget.id}>
-                        <p className="text-[10px] uppercase tracking-[0.12em] text-ink-tertiary font-micro mb-1.5">{widget.name}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {widget.variants.map((v) => {
-                            const active = v.id === activeVariant;
-                            return (
-                              <button
-                                key={v.id}
-                                onClick={() => handleSetVariant(widget.id, v.id)}
-                                title={v.description}
-                                className="border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] font-micro transition-colors"
-                                style={{
-                                  borderColor: active ? 'var(--ab-accent)' : 'var(--ab-surface-border)',
-                                  background: active ? 'var(--ab-accent)' : 'transparent',
-                                  color: active ? 'var(--ab-accent-ink)' : 'var(--ab-ink-secondary)',
-                                }}
-                              >
-                                {v.name}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      <div
+                        key={widget.id}
+                        className="pl-2"
+                        style={{ borderLeft: '2px solid var(--ab-rule)' }}
+                      >
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-ink font-micro font-semibold mb-2">
+                          {widget.name}
+                        </p>
+
+                        {hasVariants && (
+                          <div className="flex flex-wrap gap-1.5 mb-2.5">
+                            {widget.variants.map((v) => {
+                              const active = v.id === activeVariant;
+                              return (
+                                <button
+                                  key={v.id}
+                                  onClick={() => handleSetVariant(widget.id, v.id)}
+                                  title={v.description}
+                                  className="border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] font-micro transition-colors"
+                                  style={{
+                                    borderColor: active ? 'var(--ab-accent)' : 'var(--ab-surface-border)',
+                                    background: active ? 'var(--ab-accent)' : 'transparent',
+                                    color: active ? 'var(--ab-accent-ink)' : 'var(--ab-ink-secondary)',
+                                  }}
+                                >
+                                  {v.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {settings.map((field) => (
+                          <WidgetSettingsField
+                            key={field.key}
+                            field={field}
+                            value={cfg[field.key]}
+                            onChange={(val) => handleSetSetting(widget.id, field.key, val)}
+                          />
+                        ))}
                       </div>
                     );
                   })}

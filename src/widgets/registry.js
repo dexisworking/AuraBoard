@@ -15,6 +15,11 @@ const NewsWidget = lazy(() => import('./News/NewsWidget'));
 const CryptoWidget = lazy(() => import('./Crypto/CryptoWidget'));
 const StocksWidget = lazy(() => import('./Stocks/StocksWidget'));
 const SportsWidget = lazy(() => import('./Sports/SportsWidget'));
+const SunWidget = lazy(() => import('./Sun/SunWidget'));
+const MoonWidget = lazy(() => import('./Moon/MoonWidget'));
+const CountdownWidget = lazy(() => import('./Countdown/CountdownWidget'));
+const SystemWidget = lazy(() => import('./System/SystemWidget'));
+const CalendarWidget = lazy(() => import('./Calendar/CalendarWidget'));
 
 const WIDGETS = {
   clock: {
@@ -30,6 +35,10 @@ const WIDGETS = {
       { id: 'stack', name: 'Stacked', description: 'Hours over minutes, poster style' },
       { id: 'words', name: 'Word Clock', description: 'Time spelled out in display type' },
     ],
+    settings: [
+      { key: 'use24hr', type: 'boolean', label: '24-hour time', default: false },
+      { key: 'timeZone', type: 'timezone', label: 'Time zone', default: '' },
+    ],
   },
   date: {
     id: 'date',
@@ -43,6 +52,9 @@ const WIDGETS = {
       { id: 'standard', name: 'Standard', description: 'Weekday over date line' },
       { id: 'numeric', name: 'Big Number', description: 'Large day number, month beside' },
       { id: 'minimal', name: 'Minimal', description: 'Single compact line' },
+    ],
+    settings: [
+      { key: 'timeZone', type: 'timezone', label: 'Time zone', default: '' },
     ],
   },
   greeting: {
@@ -58,6 +70,9 @@ const WIDGETS = {
       { id: 'inline', name: 'Inline', description: 'One big line' },
       { id: 'minimal', name: 'Name First', description: 'Name huge, greeting as label' },
     ],
+    settings: [
+      { key: 'userName', type: 'text', label: 'Name', default: '', placeholder: 'Defaults to your global name' },
+    ],
   },
   weather: {
     id: 'weather',
@@ -72,6 +87,10 @@ const WIDGETS = {
       { id: 'compact', name: 'Compact', description: 'Temp, condition and location' },
       { id: 'minimal', name: 'Minimal', description: 'Giant temperature only' },
     ],
+    settings: [
+      { key: 'city', type: 'text', label: 'Location', default: '', placeholder: 'Defaults to global weather location' },
+      { key: 'useFahrenheit', type: 'boolean', label: 'Fahrenheit', default: false },
+    ],
   },
   spotify: {
     id: 'spotify',
@@ -85,6 +104,9 @@ const WIDGETS = {
       { id: 'full', name: 'Full', description: 'Art, progress, controls and volume' },
       { id: 'compact', name: 'Compact', description: 'Art, title and play control' },
       { id: 'minimal', name: 'Marquee', description: 'Scrolling title, no art' },
+    ],
+    settings: [
+      { key: 'pollInterval', type: 'number', label: 'Refresh (seconds)', default: 3, min: 1, max: 10 },
     ],
   },
   news: {
@@ -143,6 +165,87 @@ const WIDGETS = {
       { id: 'ticker', name: 'Ticker', description: 'Scrolling headline strip' },
     ],
   },
+  sun: {
+    id: 'sun',
+    name: 'Sun',
+    description: 'Sunrise, sunset and daylight remaining',
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 2 },
+    maxSize: { w: 12, h: 12 },
+    component: SunWidget,
+    variants: [
+      { id: 'arc', name: 'Arc', description: 'Rise/set with a daylight rail' },
+      { id: 'times', name: 'Times', description: 'Both times, large' },
+      { id: 'daylight', name: 'Daylight', description: 'Total daylight as the figure' },
+    ],
+    settings: [
+      { key: 'use24hr', type: 'boolean', label: '24-hour time', default: false },
+    ],
+  },
+  moon: {
+    id: 'moon',
+    name: 'Moon',
+    description: 'Moon phase and illumination (no network needed)',
+    defaultSize: { w: 2, h: 2 },
+    minSize: { w: 2, h: 2 },
+    maxSize: { w: 12, h: 12 },
+    component: MoonWidget,
+    variants: [
+      { id: 'disc', name: 'Disc', description: 'Large phase disc' },
+      { id: 'detail', name: 'Detail', description: 'Disc with illumination figures' },
+      { id: 'text', name: 'Typographic', description: 'Phase name, large' },
+    ],
+  },
+  countdown: {
+    id: 'countdown',
+    name: 'Countdown',
+    description: 'Days until a date you choose',
+    defaultSize: { w: 3, h: 3 },
+    minSize: { w: 2, h: 2 },
+    maxSize: { w: 12, h: 12 },
+    component: CountdownWidget,
+    variants: [
+      { id: 'days', name: 'Days', description: 'Giant day count' },
+      { id: 'clock', name: 'Clock', description: 'Days / hours / minutes' },
+      { id: 'bar', name: 'Progress', description: 'Day count with a rail' },
+    ],
+    settings: [
+      { key: 'targetDate', type: 'date', label: 'Target date', default: '' },
+      { key: 'label', type: 'text', label: 'Caption', default: '', placeholder: 'e.g. Launch day' },
+    ],
+  },
+  system: {
+    id: 'system',
+    name: 'System',
+    description: 'CPU, memory and uptime for this machine',
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 2 },
+    maxSize: { w: 12, h: 12 },
+    component: SystemWidget,
+    variants: [
+      { id: 'meters', name: 'Meters', description: 'CPU and RAM meters' },
+      { id: 'compact', name: 'Compact', description: 'Two figures side by side' },
+      { id: 'cpu', name: 'CPU', description: 'CPU as a single figure' },
+    ],
+  },
+  calendar: {
+    id: 'calendar',
+    name: 'Calendar',
+    description: 'Next events from a subscribed .ics calendar',
+    defaultSize: { w: 4, h: 3 },
+    minSize: { w: 2, h: 2 },
+    maxSize: { w: 12, h: 12 },
+    component: CalendarWidget,
+    variants: [
+      { id: 'next', name: 'Next Up', description: 'The next event, poster-sized' },
+      { id: 'agenda', name: 'Agenda', description: 'Short ruled list' },
+      { id: 'countdown', name: 'Countdown', description: 'Time until the next event' },
+    ],
+    settings: [
+      { key: 'icsUrl', type: 'text', label: 'Calendar URL (.ics)', default: '', placeholder: 'https://…/basic.ics' },
+      { key: 'use24hr', type: 'boolean', label: '24-hour time', default: false },
+    ],
+  },
 };
 
 /** Return a widget's variant metadata list (empty if none). */
@@ -153,6 +256,11 @@ export function getWidgetVariants(id) {
 /** Return the default (first) variant id for a widget. */
 export function getDefaultVariant(id) {
   return WIDGETS[id]?.variants?.[0]?.id ?? null;
+}
+
+/** Per-instance settings schema for a widget (empty if it has none). */
+export function getWidgetSettings(id) {
+  return WIDGETS[id]?.settings ?? [];
 }
 
 /**
@@ -199,6 +307,7 @@ const COMPOSITION_ALL9 = [
 ];
 
 const DEFAULT5_KEY = ['clock', 'date', 'greeting', 'weather', 'spotify'].sort().join(',');
+const ALL9_KEY = COMPOSITION_ALL9.map((p) => p.i).sort().join(',');
 
 /** Tile an arbitrary set of widgets across the full 12×12 grid. */
 function flowLayout(ids) {
@@ -249,7 +358,7 @@ export function getDefaultLayout(enabledWidgets) {
   const key = [...ids].sort().join(',');
 
   if (key === DEFAULT5_KEY) return withConstraints(COMPOSITION_DEFAULT5);
-  if (ids.length === 9) return withConstraints(COMPOSITION_ALL9);
+  if (key === ALL9_KEY) return withConstraints(COMPOSITION_ALL9);
   return withConstraints(flowLayout(ids));
 }
 

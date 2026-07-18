@@ -3,6 +3,7 @@ import SlideshowBackground from './slideshow/SlideshowBackground';
 import { getAllWidgets } from './widgets/registry';
 import { FONT_PRESETS, THEME_PRESETS } from './theme/presets';
 import { applyTheme } from './theme/applyTheme';
+import Onboarding from './app/Onboarding';
 
 function formatInterval(seconds) {
   if (seconds < 60) {
@@ -134,6 +135,11 @@ export default function SettingsApp() {
   const [screensaverDisplayIds, setScreensaverDisplayIds] = useState([]);
   const [autostart, setAutostart] = useState(false);
   const [weatherLocation, setWeatherLocation] = useState('');
+  const [photoTreatment, setPhotoTreatment] = useState('mono');
+  const [timeOfDayPalette, setTimeOfDayPalette] = useState(false);
+  const [posterMomentInterval, setPosterMomentInterval] = useState(0);
+  // null until settings load, so we don't flash onboarding at returning users
+  const [showOnboarding, setShowOnboarding] = useState(null);
 
   const allWidgets = useMemo(() => getAllWidgets(), []);
 
@@ -187,6 +193,10 @@ export default function SettingsApp() {
         setAvailableDisplays(Array.isArray(displays) ? displays : []);
         setAutostart(Boolean(settings.autostart));
         setWeatherLocation(settings.weatherLocation ?? '');
+        setPhotoTreatment(settings.photoTreatment ?? 'mono');
+        setTimeOfDayPalette(Boolean(settings.timeOfDayPalette));
+        setPosterMomentInterval(Number(settings.posterMomentInterval) || 0);
+        setShowOnboarding(!settings.onboardingComplete);
 
         if (Array.isArray(savedWidgets) && savedWidgets.length > 0) {
           setEnabledWidgets(savedWidgets);
@@ -325,6 +335,9 @@ export default function SettingsApp() {
         sportsLeagues,
         autostart,
         weatherLocation,
+        photoTreatment,
+        timeOfDayPalette,
+        posterMomentInterval,
       });
 
       // Save enabled widgets separately
@@ -417,6 +430,27 @@ export default function SettingsApp() {
 
   const activeThemePreset = THEME_PRESETS[uiTheme] || THEME_PRESETS.aurora;
   const activeFontPreset = FONT_PRESETS[uiFont] || FONT_PRESETS.outfit;
+
+  // First run: take over the settings window with the setup flow.
+  if (showOnboarding) {
+    return (
+      <Onboarding
+        onComplete={async () => {
+          setShowOnboarding(false);
+          // pick up whatever onboarding just wrote
+          try {
+            const s = await window.electronAPI?.getSettings?.();
+            if (s) {
+              setUiTheme(s.uiTheme ?? 'aurora');
+              setSlideshowFolder(s.slideshowFolder ?? '');
+            }
+            const w = await window.electronAPI?.getEnabledWidgets?.();
+            if (Array.isArray(w) && w.length) setEnabledWidgets(w);
+          } catch { /* non-fatal */ }
+        }}
+      />
+    );
+  }
 
   return (
     <div
@@ -616,6 +650,59 @@ export default function SettingsApp() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Photo treatment + ambient behaviour */}
+              <div className="grid sm:grid-cols-2 gap-6 mt-6">
+                <div>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                    Photo Treatment
+                  </label>
+                  <p className="text-xs text-ink-tertiary mb-2">
+                    How slideshow photos are rendered behind the board.
+                  </p>
+                  <select
+                    value={photoTreatment}
+                    onChange={(e) => setPhotoTreatment(e.target.value)}
+                    className="w-full border border-surface-border bg-ground px-4 py-2.5 text-[13px] uppercase tracking-[0.08em] text-ink outline-none focus:border-accent transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="mono">Monochrome</option>
+                    <option value="duotone">Duotone (accent)</option>
+                    <option value="none">Full colour</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-ink mb-1">
+                    Poster Moment
+                  </label>
+                  <p className="text-xs text-ink-tertiary mb-2">
+                    Briefly fill the screen with one giant element. 0 = off.
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="0"
+                      max="60"
+                      step="5"
+                      value={posterMomentInterval}
+                      onChange={(e) => setPosterMomentInterval(Number(e.target.value))}
+                      className="flex-1 accent-[color:var(--ab-accent)] h-[3px] bg-[color:var(--ab-rule)] appearance-none cursor-pointer"
+                    />
+                    <span className="w-16 text-right text-[12px] font-micro uppercase tracking-[0.1em] text-ink">
+                      {posterMomentInterval ? `${posterMomentInterval} min` : 'Off'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <ToggleSwitch
+                  checked={timeOfDayPalette}
+                  onChange={setTimeOfDayPalette}
+                  label="Time-of-day palette"
+                  description="Drift the palette through dawn, day, dusk and night."
+                />
               </div>
 
               <div

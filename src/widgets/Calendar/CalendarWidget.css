@@ -1,0 +1,81 @@
+/**
+ * CalendarWidget — Swiss/Brutalist. Sizes in em off the container-responsive
+ * root font-size on .ab-widget-root.
+ */
+
+.cal-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  padding: 0.45em 0;
+  border-bottom: var(--ab-rule-hairline) solid var(--ab-rule);
+}
+
+.cal-row:last-child { border-bottom: none; }
+
+.cal-when {
+  font-family: var(--ab-font-micro);
+  font-size: 0.62em;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ab-accent);
+}
+
+.cal-time { color: var(--ab-ink-tertiary); }
+
+.cal-summary {
+  font-family: var(--ab-font-ui);
+  font-variation-settings: 'wdth' 90, 'wght' 650;
+  font-size: 0.95em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: var(--ab-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* lead (next-up) treatment */
+.cal-when-lead {
+  font-family: var(--ab-font-micro);
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ab-ink-tertiary);
+}
+
+.cal-title-lead {
+  font-family: var(--ab-font-ui);
+  font-variation-settings: 'wdth' 82, 'wght' 800;
+  font-size: 1.7em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: var(--ab-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cal-title {
+  font-family: var(--ab-font-ui);
+  font-variation-settings: 'wdth' 88, 'wght' 700;
+  font-size: 1em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: var(--ab-ink-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

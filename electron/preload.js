@@ -127,6 +127,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** Save per-widget config map. */
   saveWidgetConfig: (config) => ipcRenderer.invoke('save-widget-config', config),
 
+  /**
+   * Read from the shared main-process data layer (TTL cache + backoff +
+   * single-flight across windows).
+   * @returns {Promise<{data:any, error:string|null, fetchedAt:number|null, isStale:boolean}>}
+   */
+  dataFetch: (source, params) => ipcRenderer.invoke('data-fetch', source, params),
+
+  /** Auto-update status: { state, version, current, percent?, error? } */
+  getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
+
+  /** Restart and install a downloaded update. */
+  installUpdateNow: () => ipcRenderer.invoke('install-update-now'),
+
   /** Parse an RSS feed URL in the main process and return items. */
   fetchRss: (url) => ipcRenderer.invoke('fetch-rss', url),
 

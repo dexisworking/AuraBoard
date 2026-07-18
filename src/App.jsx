@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import SlideshowBackground from './slideshow/SlideshowBackground';
 import WidgetGrid from './layout/WidgetGrid';
+import PosterMoment from './layout/PosterMoment';
 import { getFontPreset, getThemePreset } from './theme/presets';
 import { applyTheme } from './theme/applyTheme';
+import { getDuotoneRamp, getTimePhase } from './theme/tokens';
 
 export default function App() {
   const [isActive, setIsActive] = useState(false);
@@ -24,6 +26,10 @@ export default function App() {
   const [widgetConfig, setWidgetConfig] = useState({});
   const [userName, setUserName] = useState('');
   const [weatherLocation, setWeatherLocation] = useState('');
+  const [photoTreatment, setPhotoTreatment] = useState('mono');
+  const [timeOfDayPalette, setTimeOfDayPalette] = useState(false);
+  const [timePhase, setTimePhase] = useState(() => getTimePhase());
+  const [posterMomentInterval, setPosterMomentInterval] = useState(0);
 
   useEffect(() => {
     let cleanup = null;
@@ -75,6 +81,9 @@ export default function App() {
         setUiFont(settings.uiFont ?? 'outfit');
         setUserName(settings.userName ?? '');
         setWeatherLocation(settings.weatherLocation ?? '');
+        setPhotoTreatment(settings.photoTreatment ?? 'mono');
+        setTimeOfDayPalette(Boolean(settings.timeOfDayPalette));
+        setPosterMomentInterval(Number(settings.posterMomentInterval) || 0);
         setWidgetConfig(savedConfig && typeof savedConfig === 'object' ? savedConfig : {});
 
         if (Array.isArray(savedWidgets) && savedWidgets.length > 0) {
@@ -103,10 +112,18 @@ export default function App() {
 
   // Flatten the active theme's tokens onto :root as --ab-* custom properties.
   // Tailwind utilities and widget CSS both read these, so this one call is
-  // what makes a theme switch take effect everywhere.
+  // what makes a theme switch take effect everywhere. When the time-of-day
+  // palette is on, the active phase tints the ground and accent.
   useEffect(() => {
-    applyTheme(uiTheme);
-  }, [uiTheme]);
+    applyTheme(uiTheme, document.documentElement, timeOfDayPalette ? timePhase : null);
+  }, [uiTheme, timeOfDayPalette, timePhase]);
+
+  // Re-evaluate the day phase periodically so the palette drifts on its own.
+  useEffect(() => {
+    if (!timeOfDayPalette) return undefined;
+    const id = setInterval(() => setTimePhase(getTimePhase()), 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [timeOfDayPalette]);
 
   const handleDismiss = useCallback(() => {
     if (window.electronAPI?.dismissScreensaver) {
@@ -215,6 +232,8 @@ export default function App() {
         interval={slideshowInterval}
         transition={slideshowTransition}
         shuffle={slideshowShuffle}
+        treatment={photoTreatment}
+        duotoneRamp={getDuotoneRamp(uiTheme, timeOfDayPalette ? timePhase : null)}
       />
 
       <div className="relative z-10 w-full h-full">
@@ -241,6 +260,15 @@ export default function App() {
           </svg>
         </button>
       </div>
+
+      {/* Periodic full-screen poster moment (disabled when interval is 0). */}
+      {!editMode && (
+        <PosterMoment
+          intervalMin={posterMomentInterval}
+          userName={userName}
+          use24hr={Boolean(widgetConfig?.clock?.use24hr)}
+        />
+      )}
     </div>
   );
 }

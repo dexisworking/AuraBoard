@@ -18,11 +18,13 @@ import {
   RULE,
   MOTION,
   getTheme,
+  getPhaseColor,
 } from './tokens';
 
-export function buildThemeVars(themeId) {
+export function buildThemeVars(themeId, phase) {
   const theme = getTheme(themeId);
-  const c = theme.color;
+  // Time-of-day palette shifts the ground/accent; falsy phase = base palette.
+  const c = phase ? getPhaseColor(themeId, phase) : theme.color;
 
   return {
     /* color */
@@ -99,13 +101,15 @@ export function buildThemeVars(themeId) {
   };
 }
 
-/** Apply theme variables directly to a DOM element (usually document.documentElement). */
-export function applyTheme(themeId, element = document.documentElement) {
-  const vars = buildThemeVars(themeId);
+/**
+ * Apply theme variables to a DOM element (usually document.documentElement).
+ * `phase` optionally applies the time-of-day palette shift.
+ */
+export function applyTheme(themeId, element = document.documentElement, phase = null) {
+  const vars = buildThemeVars(themeId, phase);
   for (const [key, value] of Object.entries(vars)) {
     element.style.setProperty(key, value);
   }
-  const theme = getTheme(themeId);
-  element.style.backgroundColor = theme.color.bg;
+  element.style.backgroundColor = vars['--ab-bg'];
   return vars;
 }

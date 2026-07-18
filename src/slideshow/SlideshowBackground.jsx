@@ -83,6 +83,8 @@ export default function SlideshowBackground({
   interval = 60,
   transition = 'fade',
   shuffle = false,
+  treatment = 'mono',
+  duotoneRamp = null,
 }) {
   const safeImages = useMemo(() => images.filter(Boolean), [images]);
   const [state, dispatch] = useReducer(reducer, safeImages, (initialImages) =>
@@ -178,6 +180,33 @@ export default function SlideshowBackground({
         }
       `}</style>
 
+      {/* Duotone ramp: luminance → (theme ground → accent). Defined inline so it
+          re-renders when the theme changes. */}
+      {treatment === 'duotone' && duotoneRamp && (
+        <svg
+          aria-hidden="true"
+          width="0"
+          height="0"
+          style={{ position: 'absolute', pointerEvents: 'none' }}
+        >
+          <filter id="ab-photo-duotone" colorInterpolationFilters="sRGB">
+            {/* collapse to luminance, then map that ramp onto two brand colours */}
+            <feColorMatrix
+              type="matrix"
+              values="0.2126 0.7152 0.0722 0 0
+                      0.2126 0.7152 0.0722 0 0
+                      0.2126 0.7152 0.0722 0 0
+                      0 0 0 1 0"
+            />
+            <feComponentTransfer>
+              <feFuncR type="table" tableValues={duotoneRamp.r} />
+              <feFuncG type="table" tableValues={duotoneRamp.g} />
+              <feFuncB type="table" tableValues={duotoneRamp.b} />
+            </feComponentTransfer>
+          </filter>
+        </svg>
+      )}
+
       <div
         aria-hidden="true"
         style={{
@@ -195,11 +224,18 @@ export default function SlideshowBackground({
             position: 'absolute',
             inset: 0,
             overflow: 'hidden',
-            // Swiss/Brutalist photo treatment: any user photo is driven to
-            // high-contrast monochrome so type and the signal colour always
-            // win. Applied to the container so both crossfading images and the
-            // Ken Burns transforms inherit it.
-            filter: 'var(--ab-photo-filter, none)',
+            // Swiss/Brutalist photo treatment. Applied to the container so both
+            // crossfading images and the Ken Burns transforms inherit it.
+            //  duotone — contrast-boost, then map luminance onto ground→accent
+            //  none    — leave the photograph alone
+            //  mono    — the token's high-contrast greyscale (default)
+            filter: treatment === 'duotone'
+              // trailing brightness keeps contrast headroom for white type,
+              // matching the legibility floor the mono treatment holds
+              ? 'contrast(1.2) url(#ab-photo-duotone) brightness(0.78)'
+              : treatment === 'none'
+                ? 'none'
+                : 'var(--ab-photo-filter, none)',
           }}
         >
           <img

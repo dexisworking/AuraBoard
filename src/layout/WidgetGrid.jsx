@@ -423,6 +423,19 @@ export default function WidgetGrid({
       widgetProps.pollInterval = cfg.pollInterval ?? 3;
       Object.assign(widgetProps, spotifyProps);
     }
+    if (item.i === 'sun') {
+      widgetProps.city = cfg.city || weatherLocation;
+      widgetProps.use24hr = cfg.use24hr ?? false;
+    }
+    if (item.i === 'date' && cfg.timeZone) widgetProps.timeZone = cfg.timeZone;
+    if (item.i === 'countdown') {
+      widgetProps.targetDate = cfg.targetDate ?? '';
+      widgetProps.label = cfg.label ?? '';
+    }
+    if (item.i === 'calendar') {
+      widgetProps.icsUrl = cfg.icsUrl ?? '';
+      widgetProps.use24hr = cfg.use24hr ?? false;
+    }
 
     return (
       <div

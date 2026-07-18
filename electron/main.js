@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, powerMonitor, nativeImage, dialog, screen } from 'electron';
+import { app, BrowserWindow, Tray, Menu, ipcMain, powerMonitor, nativeImage, dialog, screen, protocol, net, session, safeStorage } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
@@ -6,8 +6,172 @@ import { startAuth, isAuthenticated, disconnectSpotify, getSpotifyUsername } fro
 import * as spotifyApi from './spotify-api.js';
 import RssParser from 'rss-parser';
 import yahooFinance from 'yahoo-finance2';
+import * as providers from './services/providers.js';
+import electronUpdater from 'electron-updater';
+
+const { autoUpdater } = electronUpdater;
 
 const rssParser = new RssParser();
+
+/* ── Secure media protocol ────────────────────────────────────────────────
+ * Slideshow photos used to be loaded as file:// URLs, which forced
+ * `webSecurity: false` on every window — disabling the same-origin policy for
+ * the whole app. Instead we serve them over a custom scheme that only ever
+ * resolves paths inside the user's configured slideshow folder.
+ */
+const MEDIA_SCHEME = 'auraboard-media';
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: MEDIA_SCHEME,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
+]);
+
+/** Encode an absolute path into a media URL the renderer can use as an <img> src. */
+function toMediaUrl(absolutePath) {
+  const token = Buffer.from(absolutePath, 'utf8').toString('base64url');
+  return `${MEDIA_SCHEME}://f/${token}`;
+}
+
+/** True when `target` sits inside `root` (prevents ../ escapes). */
+function isInside(root, target) {
+  if (!root) return false;
+  const rel = path.relative(path.resolve(root), path.resolve(target));
+  return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+function registerMediaProtocol() {
+  protocol.handle(MEDIA_SCHEME, async (request) => {
+    try {
+      const token = new URL(request.url).pathname.replace(/^\/+/, '');
+      const filePath = Buffer.from(decodeURIComponent(token), 'base64url').toString('utf8');
+      const allowedRoot = store ? store.get('slideshowFolder', '') : '';
+
+      // Only ever serve files from inside the configured slideshow folder.
+      if (!isInside(allowedRoot, filePath)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      const ext = path.extname(filePath).toLowerCase();
+      if (!IMAGE_EXTENSIONS.has(ext)) {
+        return new Response('Unsupported media type', { status: 415 });
+      }
+      return await net.fetch(pathToFileURL(filePath).href);
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  });
+}
+
+/* ── Content Security Policy ──────────────────────────────────────────────
+ * connect-src lists only the data sources the widgets actually use. Anything
+ * that moves into the main-process data layer can be dropped from here.
+ */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${MEDIA_SCHEME}: https:`,
+  "font-src 'self' data:",
+  [
+    "connect-src 'self'",
+    'https://api.open-meteo.com',
+    'https://geocoding-api.open-meteo.com',
+    'https://air-quality-api.open-meteo.com',
+    'https://api.coingecko.com',
+    'https://gnews.io',
+    'https://www.alphavantage.co',
+    'https://www.thesportsdb.com',
+    'https://ipapi.co',
+    'https://api.spotify.com',
+  ].join(' '),
+  "object-src 'none'",
+  "frame-src 'none'",
+].join('; ');
+
+function applyCsp() {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [CSP] },
+    });
+  });
+}
+
+/* ── Secret storage ───────────────────────────────────────────────────────
+ * API keys were kept in plaintext in config.json. safeStorage encrypts them
+ * with an OS-managed key (DPAPI on Windows). Values are stored under a
+ * "<key>Enc" entry; plaintext leftovers are migrated on first read.
+ */
+const SECRET_KEYS = ['gnewsApiKey', 'alphaVantageApiKey'];
+
+function readSecret(key) {
+  if (!store) return '';
+  const enc = store.get(`${key}Enc`, '');
+  if (enc) {
+    try {
+      if (safeStorage.isEncryptionAvailable()) {
+        return safeStorage.decryptString(Buffer.from(enc, 'base64'));
+      }
+    } catch { /* fall through to plaintext */ }
+  }
+  return store.get(key, '');
+}
+
+function writeSecret(key, value) {
+  if (!store) return;
+  const str = String(value ?? '');
+  if (str && safeStorage.isEncryptionAvailable()) {
+    store.set(`${key}Enc`, safeStorage.encryptString(str).toString('base64'));
+    store.set(key, ''); // never leave the plaintext behind
+  } else {
+    // Encryption unavailable — store as-is rather than silently losing the key.
+    store.set(key, str);
+    store.set(`${key}Enc`, '');
+  }
+}
+
+/** Move any plaintext secrets into encrypted storage once, at startup. */
+function migrateSecrets() {
+  if (!store || !safeStorage.isEncryptionAvailable()) return;
+  for (const key of SECRET_KEYS) {
+    const plain = store.get(key, '');
+    if (plain) writeSecret(key, plain);
+  }
+}
+
+/* ── Auto-update ──────────────────────────────────────────────────────────
+ * An ambient display is rarely watched, so updates download quietly and are
+ * installed on quit rather than interrupting whatever is on screen.
+ */
+let updateStatus = { state: 'idle', version: null, error: null };
+
+function setupAutoUpdate() {
+  if (isDev) {
+    updateStatus = { state: 'disabled', version: null, error: 'Development build' };
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => { updateStatus = { state: 'checking', version: null, error: null }; });
+  autoUpdater.on('update-available', (info) => { updateStatus = { state: 'downloading', version: info?.version ?? null, error: null }; });
+  autoUpdater.on('update-not-available', () => { updateStatus = { state: 'current', version: app.getVersion(), error: null }; });
+  autoUpdater.on('download-progress', (p) => {
+    updateStatus = { state: 'downloading', version: updateStatus.version, error: null, percent: Math.round(p?.percent ?? 0) };
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    updateStatus = { state: 'ready', version: info?.version ?? null, error: null };
+  });
+  autoUpdater.on('error', (err) => {
+    // Never surface an update failure as a crash — the board keeps running.
+    updateStatus = { state: 'error', version: null, error: err?.message || 'Update failed' };
+  });
+
+  const check = () => autoUpdater.checkForUpdates().catch(() => { /* handled by 'error' */ });
+  setTimeout(check, 30_000);            // shortly after launch
+  setInterval(check, 6 * 60 * 60_000);  // and every six hours
+}
 
 // __dirname and __filename are automatically provided by electron-vite
 
@@ -46,6 +210,13 @@ async function initStore() {
         // Manual weather location. Empty = auto-detect via IP geolocation,
         // which can fail or be rate-limited — hence the manual override.
         weatherLocation: '',
+        // Slideshow photo treatment: mono | duotone | none
+        photoTreatment: 'mono',
+        // Shift the palette through dawn/day/dusk/night
+        timeOfDayPalette: false,
+        // Periodic full-screen "poster moment" (minutes; 0 = off)
+        posterMomentInterval: 0,
+        onboardingComplete: false,
         gnewsApiKey: '',
         alphaVantageApiKey: '',
         stockSymbols: 'AAPL,MSFT,GOOGL,AMZN,TSLA',
@@ -102,7 +273,7 @@ async function scanImageDirectory(folderPath) {
 
       const extension = path.extname(entry.name).toLowerCase();
       if (IMAGE_EXTENSIONS.has(extension)) {
-        images.push(pathToFileURL(fullPath).href);
+        images.push(toMediaUrl(fullPath));
       }
     }
   }
@@ -211,7 +382,7 @@ function createScreensaverWindow() {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false,
-        webSecurity: false, // Allow loading local file:// URIs for user slide backgrounds
+        webSecurity: true, // media now served via the auraboard-media:// scheme
       },
     });
 
@@ -282,7 +453,7 @@ function createSettingsWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      webSecurity: false, // Allow local file loading
+      webSecurity: true,
     },
   });
 
@@ -325,7 +496,7 @@ function createLayoutEditorWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      webSecurity: false,
+      webSecurity: true,
     },
   });
 
@@ -448,12 +619,16 @@ function setupIPC() {
       uiFont: store ? store.get('uiFont', 'outfit') : 'outfit',
       userName: store ? store.get('userName', '') : '',
       weatherLocation: store ? store.get('weatherLocation', '') : '',
+      photoTreatment: store ? store.get('photoTreatment', 'mono') : 'mono',
+      timeOfDayPalette: store ? store.get('timeOfDayPalette', false) : false,
+      posterMomentInterval: store ? store.get('posterMomentInterval', 0) : 0,
+      onboardingComplete: store ? store.get('onboardingComplete', false) : false,
       screensaverUseAllDisplays: store ? store.get('screensaverUseAllDisplays', true) : true,
       screensaverDisplayIds: store ? store.get('screensaverDisplayIds', []) : [],
       useSpotifyArtBackground: store ? store.get('useSpotifyArtBackground', false) : false,
       // Phase 5
-      gnewsApiKey: store ? store.get('gnewsApiKey', '') : '',
-      alphaVantageApiKey: store ? store.get('alphaVantageApiKey', '') : '',
+      gnewsApiKey: readSecret('gnewsApiKey'),
+      alphaVantageApiKey: readSecret('alphaVantageApiKey'),
       stockSymbols: store ? store.get('stockSymbols', 'AAPL,MSFT,GOOGL,AMZN,TSLA') : 'AAPL,MSFT,GOOGL,AMZN,TSLA',
       cryptoCoinIds: store ? store.get('cryptoCoinIds', 'bitcoin,ethereum,solana,binancecoin,cardano') : 'bitcoin,ethereum,solana,binancecoin,cardano',
       sportsLeagues: store ? store.get('sportsLeagues', '4387,4328') : '4387,4328',
@@ -499,6 +674,19 @@ function setupIPC() {
     if (data.weatherLocation !== undefined) {
       store.set('weatherLocation', String(data.weatherLocation).slice(0, 80).trim());
     }
+    if (data.photoTreatment !== undefined) {
+      const t = ['mono', 'duotone', 'none'].includes(data.photoTreatment) ? data.photoTreatment : 'mono';
+      store.set('photoTreatment', t);
+    }
+    if (data.timeOfDayPalette !== undefined) {
+      store.set('timeOfDayPalette', Boolean(data.timeOfDayPalette));
+    }
+    if (data.posterMomentInterval !== undefined) {
+      store.set('posterMomentInterval', Math.max(0, Math.min(120, Number(data.posterMomentInterval) || 0)));
+    }
+    if (data.onboardingComplete !== undefined) {
+      store.set('onboardingComplete', Boolean(data.onboardingComplete));
+    }
     if (data.screensaverUseAllDisplays !== undefined) {
       store.set('screensaverUseAllDisplays', Boolean(data.screensaverUseAllDisplays));
     }
@@ -515,10 +703,10 @@ function setupIPC() {
     }
     // Phase 5 settings
     if (data.gnewsApiKey !== undefined) {
-      store.set('gnewsApiKey', String(data.gnewsApiKey));
+      writeSecret('gnewsApiKey', data.gnewsApiKey);
     }
     if (data.alphaVantageApiKey !== undefined) {
-      store.set('alphaVantageApiKey', String(data.alphaVantageApiKey));
+      writeSecret('alphaVantageApiKey', data.alphaVantageApiKey);
     }
     if (data.stockSymbols !== undefined) {
       store.set('stockSymbols', String(data.stockSymbols));
@@ -698,6 +886,49 @@ function setupIPC() {
     return { success: true };
   });
 
+  /* ── Shared data layer ────────────────────────────────────────────────
+     One cache + one in-flight request per key across ALL screensaver windows,
+     so a multi-monitor setup doesn't multiply third-party API calls. */
+  ipcMain.handle('data-fetch', async (_event, source, params = {}) => {
+    try {
+      switch (source) {
+        case 'weather':
+          return await providers.getWeather({
+            place: params.place ?? (store ? store.get('weatherLocation', '') : ''),
+            useFahrenheit: Boolean(params.useFahrenheit),
+          });
+        case 'crypto':
+          return await providers.getCrypto({
+            coinIds: params.coinIds || (store ? store.get('cryptoCoinIds', 'bitcoin,ethereum') : 'bitcoin,ethereum'),
+          });
+        case 'sports':
+          return await providers.getSports({
+            leagueIds: params.leagueIds || (store ? store.get('sportsLeagues', '4387,4328') : '4387,4328'),
+            leagueNames: params.leagueNames || {},
+          });
+        case 'calendar':
+          return await providers.getCalendar({
+            icsUrl: params.icsUrl ?? (store ? store.get('calendarUrl', '') : ''),
+          });
+        case 'system':
+          return { data: providers.getSystemStats(), error: null, fetchedAt: Date.now(), isStale: false };
+        default:
+          return { data: null, error: `Unknown source "${source}"`, fetchedAt: null, isStale: false };
+      }
+    } catch (err) {
+      return { data: null, error: err?.message || 'Request failed', fetchedAt: null, isStale: false };
+    }
+  });
+
+  ipcMain.handle('get-update-status', async () => ({ ...updateStatus, current: app.getVersion() }));
+
+  ipcMain.handle('install-update-now', async () => {
+    if (updateStatus.state !== 'ready') return { success: false, error: 'No update ready' };
+    app.isQuitting = true;
+    setImmediate(() => autoUpdater.quitAndInstall());
+    return { success: true };
+  });
+
   // Per-widget config (variant + instance settings), keyed by widget id.
   ipcMain.handle('get-widget-config', async () => {
     return store ? store.get('widgetConfig', {}) : {};
@@ -765,6 +996,13 @@ const scrMode = handleScrArguments();
 app.whenReady().then(async () => {
   // Initialize the electron-store
   await initStore();
+
+  // Security: serve media over a scoped scheme, lock down CSP, and move any
+  // plaintext API keys into OS-encrypted storage.
+  registerMediaProtocol();
+  applyCsp();
+  migrateSecrets();
+  setupAutoUpdate();
 
   // Set app to start on Windows login
   if (!isDev) {

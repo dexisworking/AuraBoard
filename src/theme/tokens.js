@@ -224,3 +224,95 @@ export const DEFAULT_THEME_ID = 'aurora';
 export function getTheme(themeId) {
   return THEMES[themeId] || THEMES[DEFAULT_THEME_ID];
 }
+
+/* ── Colour utilities ─────────────────────────────────────────────────────── */
+
+/** Parse "#rrggbb" (or "#rgb") into normalised [r,g,b] in 0..1. */
+export function hexToRgb01(hex) {
+  if (typeof hex !== 'string') return [0, 0, 0];
+  let h = hex.trim().replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length !== 6) return [0, 0, 0];
+  const n = parseInt(h, 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+/**
+ * Photo treatments for the slideshow background.
+ *  mono    — high-contrast greyscale (the default Swiss treatment)
+ *  duotone — shadows map to the theme ground, highlights to the accent, so
+ *            any photo becomes a two-colour poster print
+ *  none    — untouched photography
+ */
+export const PHOTO_TREATMENTS = {
+  mono: { id: 'mono', label: 'Monochrome' },
+  duotone: { id: 'duotone', label: 'Duotone' },
+  none: { id: 'none', label: 'Full colour' },
+};
+
+export const DEFAULT_PHOTO_TREATMENT = 'mono';
+
+/**
+ * Build the feComponentTransfer table values for a duotone ramp between the
+ * theme's ground colour (shadows) and its accent (highlights).
+ */
+export function getDuotoneRamp(themeId, phase) {
+  const color = getPhaseColor(themeId, phase);
+  const dark = hexToRgb01(color.bg);
+  const light = hexToRgb01(color.accent);
+  return {
+    r: `${dark[0]} ${light[0]}`,
+    g: `${dark[1]} ${light[1]}`,
+    b: `${dark[2]} ${light[2]}`,
+  };
+}
+
+/* ── Time-of-day palette ───────────────────────────────────────────────────
+ * The board lives on a wall all day, so the palette drifts with the light:
+ * warm at dawn, neutral through the day, hot at dusk, cool at night. Shifts
+ * are deliberately small — they tint the ground and accent without touching
+ * ink contrast, so the legibility floor established in DS-1 still holds.
+ */
+export const TIME_PHASES = {
+  dawn: { id: 'dawn', label: 'Dawn', tint: '#FF9A5C', bgAmount: 0.10, accentAmount: 0.26 },
+  day: { id: 'day', label: 'Day', tint: null, bgAmount: 0, accentAmount: 0 },
+  dusk: { id: 'dusk', label: 'Dusk', tint: '#FF5A2B', bgAmount: 0.12, accentAmount: 0.20 },
+  night: { id: 'night', label: 'Night', tint: '#2E4E86', bgAmount: 0.14, accentAmount: 0.12 },
+};
+
+/** Which phase of the day a given time falls in. */
+export function getTimePhase(date = new Date()) {
+  const h = date.getHours();
+  if (h >= 5 && h < 8) return 'dawn';
+  if (h >= 8 && h < 17) return 'day';
+  if (h >= 17 && h < 21) return 'dusk';
+  return 'night';
+}
+
+/** Linear blend between two hex colours; t=0 → a, t=1 → b. */
+export function mixHex(a, b, t) {
+  const [ar, ag, ab] = hexToRgb01(a);
+  const [br, bg, bb] = hexToRgb01(b);
+  const to255 = (v) => Math.round(Math.max(0, Math.min(1, v)) * 255);
+  const m = (x, y) => to255(x + (y - x) * t);
+  return `#${[m(ar, br), m(ag, bg), m(ab, bb)]
+    .map((v) => v.toString(16).padStart(2, '0'))
+    .join('')}`;
+}
+
+/**
+ * The theme's colour object with the time-of-day shift applied. Passing a
+ * falsy phase (or 'day') returns the base palette untouched.
+ */
+export function getPhaseColor(themeId, phase) {
+  const theme = getTheme(themeId);
+  const p = TIME_PHASES[phase];
+  if (!p || !p.tint) return theme.color;
+  return {
+    ...theme.color,
+    bg: mixHex(theme.color.bg, p.tint, p.bgAmount),
+    accent: mixHex(theme.color.accent, p.tint, p.accentAmount),
+    surface: mixHex(theme.color.surface, p.tint, p.bgAmount * 0.8),
+    surfaceRaised: mixHex(theme.color.surfaceRaised, p.tint, p.bgAmount * 0.6),
+  };
+}

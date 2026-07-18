@@ -1,13 +1,51 @@
 import crypto from 'node:crypto';
 import http from 'node:http';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, safeStorage } from 'electron';
 
+// CLIENT_ID is public by design in the PKCE flow — no secret is shipped.
 const CLIENT_ID = 'bea9ffd201a14c5ead7af3d26915655e';
 const REDIRECT_URI = 'http://127.0.0.1:8888/callback';
 const SCOPES = 'user-read-playback-state user-modify-playback-state user-read-currently-playing';
 const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const AUTH_URL = 'https://accounts.spotify.com/authorize';
-const ENCRYPTION_KEY = 'auraboard-spotify-token-enc-key!';
+
+/**
+ * Per-install encryption key for the token store.
+ *
+ * This used to be a hardcoded literal, which meant every AuraBoard install
+ * shared the same key — obfuscation, not encryption. The key is now random per
+ * install and itself sealed with the OS keychain (DPAPI on Windows) via
+ * safeStorage, so tokens at rest are only readable by this user on this machine.
+ */
+const KEY_STORE_NAME = 'auraboard-secure';
+
+async function getEncryptionKey() {
+  const { default: Store } = await import('electron-store');
+  const keyStore = new Store({ name: KEY_STORE_NAME, defaults: { spotifyKeyEnc: '', spotifyKeyPlain: '' } });
+
+  const sealed = keyStore.get('spotifyKeyEnc', '');
+  if (sealed) {
+    try {
+      if (safeStorage.isEncryptionAvailable()) {
+        return safeStorage.decryptString(Buffer.from(sealed, 'base64'));
+      }
+    } catch { /* regenerate below */ }
+  }
+
+  // Fall back to a previously generated unsealed key so tokens survive an
+  // OS-keychain outage rather than silently forcing a re-auth.
+  const plain = keyStore.get('spotifyKeyPlain', '');
+  if (plain && !safeStorage.isEncryptionAvailable()) return plain;
+
+  const fresh = crypto.randomBytes(32).toString('base64');
+  if (safeStorage.isEncryptionAvailable()) {
+    keyStore.set('spotifyKeyEnc', safeStorage.encryptString(fresh).toString('base64'));
+    keyStore.set('spotifyKeyPlain', '');
+  } else {
+    keyStore.set('spotifyKeyPlain', fresh);
+  }
+  return fresh;
+}
 
 let store = null;
 
@@ -28,15 +66,23 @@ async function generateCodeChallenge(verifier) {
 async function getStore() {
   if (store) return store;
   const { default: Store } = await import('electron-store');
-  store = new Store({
-    name: 'spotify-tokens',
-    encryptionKey: ENCRYPTION_KEY,
-    defaults: {
-      accessToken: '',
-      refreshToken: '',
-      expiresAt: 0,
-    },
-  });
+  const encryptionKey = await getEncryptionKey();
+  try {
+    store = new Store({
+      name: 'spotify-tokens',
+      encryptionKey,
+      defaults: { accessToken: '', refreshToken: '', expiresAt: 0 },
+    });
+  } catch {
+    // Tokens written under the old shared key can't be decrypted with the new
+    // per-install one; start clean and let the user reconnect.
+    store = new Store({
+      name: 'spotify-tokens',
+      encryptionKey,
+      clearInvalidConfig: true,
+      defaults: { accessToken: '', refreshToken: '', expiresAt: 0 },
+    });
+  }
   return store;
 }
 

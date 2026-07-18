@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
 import ErrorState from '../../ui/ErrorState';
+import useWidgetData from '../../data/useWidgetData';
 import '../../ui/primitives.css';
 
 /* WMO weather codes → text labels. No emoji: condition is typography. */
@@ -23,72 +23,29 @@ const wmoLabel = (code) => WMO_LABELS[code] || 'Unknown';
  * condition and location as tracked-out captions, three-day forecast as a
  * hairline-ruled column row. No icons, no cards, no shadows.
  */
+/** "14:00" style label for the next likely rain hour. */
+function rainLabel(nextRain) {
+  if (!nextRain?.time) return null;
+  const d = new Date(nextRain.time);
+  if (Number.isNaN(d.getTime())) return null;
+  const hh = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+  return `Rain ${nextRain.probability}% at ${hh}`;
+}
+
 export default function WeatherWidget({ city = '', useFahrenheit = false, variant = 'full' }) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [locationName, setLocationName] = useState('');
+  // Shared main-process data layer: one cache + one request across all windows,
+  // with stale-on-error instead of a blank widget.
+  const {
+    data: payload, status, error, isStale, refresh,
+  } = useWidgetData(
+    'weather',
+    { place: city, useFahrenheit },
+    { refreshMs: 10 * 60_000 },
+  );
 
-  const fetchWeather = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const wanted = (city || '').trim();
-      let lat;
-      let lon;
-      let locName = wanted;
-
-      if (wanted) {
-        // Open-Meteo's own geocoder: free, CORS-friendly and no User-Agent or
-        // rate-limit requirements (unlike Nominatim, which often 403s here).
-        const geoRes = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(wanted)}&count=1&language=en&format=json`
-        );
-        if (!geoRes.ok) throw new Error('Location lookup failed — check your connection');
-        const geo = await geoRes.json();
-        const hit = geo?.results?.[0];
-        if (!hit) throw new Error(`"${wanted}" not found — try a different spelling`);
-        lat = hit.latitude;
-        lon = hit.longitude;
-        locName = hit.name + (hit.country_code ? `, ${hit.country_code}` : '');
-      } else {
-        // No manual location: try IP geolocation, but treat failure as a
-        // prompt to set one rather than a dead end.
-        try {
-          const ipRes = await fetch('https://ipapi.co/json/');
-          if (!ipRes.ok) throw new Error('ip lookup failed');
-          const ipData = await ipRes.json();
-          if (!Number.isFinite(ipData?.latitude) || !Number.isFinite(ipData?.longitude)) {
-            throw new Error('ip lookup returned no coordinates');
-          }
-          lat = ipData.latitude;
-          lon = ipData.longitude;
-          locName = ipData.city || 'Local area';
-        } catch {
-          throw new Error('Auto-location unavailable — set a Weather Location in Settings');
-        }
-      }
-
-      setLocationName(locName);
-
-      const tempUnit = useFahrenheit ? '&temperature_unit=fahrenheit' : '';
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto${tempUnit}`;
-      const weatherRes = await fetch(weatherUrl);
-      if (!weatherRes.ok) throw new Error('Weather data fetch failed');
-      setData(await weatherRes.json());
-    } catch (err) {
-      console.error('Weather fetch error:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [city, useFahrenheit]);
-
-  useEffect(() => {
-    fetchWeather();
-    const intervalId = setInterval(fetchWeather, 15 * 60 * 1000);
-    return () => clearInterval(intervalId);
-  }, [fetchWeather]);
+  const data = payload ? { current: payload.current, daily: payload.daily } : null;
+  const locationName = payload?.locationName || '';
+  const loading = status === 'loading';
 
   if (loading && !data) {
     return (
@@ -105,14 +62,17 @@ export default function WeatherWidget({ city = '', useFahrenheit = false, varian
   if (error && !data) {
     return (
       <div className="ab-widget-root">
-        <ErrorState message={error} onRetry={fetchWeather} />
+        <ErrorState message={error} onRetry={refresh} />
       </div>
     );
   }
 
-  if (!data) return null;
+  if (!data?.current || !data?.daily) return null;
 
   const { current, daily } = data;
+  const rain = rainLabel(payload?.nextRain);
+  const uv = current?.uv_index;
+  const aqi = payload?.airQuality?.european_aqi;
 
   const micro = {
     fontFamily: 'var(--ab-font-micro)', fontSize: '0.9em', fontWeight: 600,
@@ -170,13 +130,18 @@ export default function WeatherWidget({ city = '', useFahrenheit = false, varian
         <div className="flex flex-col" style={{ paddingBottom: '0.6em' }}>
           <span className="text-ink" style={micro}>{wmoLabel(current.weathercode)}</span>
           <span className="text-ink-tertiary" style={{ ...micro, marginTop: '0.3em' }}>
-            {locationName || 'Local area'}
+            {locationName || 'Local area'}{isStale ? ' · stale' : ''}
           </span>
         </div>
       </div>
 
+      {/* rain outlook — only when something is actually expected */}
+      {rain && (
+        <span className="text-accent" style={{ ...micro, marginTop: '0.5em' }}>{rain}</span>
+      )}
+
       {/* detail strip */}
-      <div className="ab-rule-h flex" style={{ marginTop: '0.7em', paddingTop: '0.6em', gap: '1.2em' }}>
+      <div className="ab-rule-h flex flex-wrap" style={{ marginTop: '0.7em', paddingTop: '0.6em', gap: '0.4em 1.2em' }}>
         <span className="text-ink-secondary" style={micro}>
           Feels {Math.round(current.apparent_temperature)}°
         </span>
@@ -186,6 +151,12 @@ export default function WeatherWidget({ city = '', useFahrenheit = false, varian
         <span className="text-ink-secondary" style={micro}>
           Wind {Math.round(current.windspeed_10m)}
         </span>
+        {Number.isFinite(uv) && (
+          <span className="text-ink-secondary" style={micro}>UV {Math.round(uv)}</span>
+        )}
+        {Number.isFinite(aqi) && (
+          <span className="text-ink-secondary" style={micro}>AQI {Math.round(aqi)}</span>
+        )}
       </div>
 
       {/* three-day forecast — ruled columns, figures only */}
