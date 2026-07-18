@@ -2,11 +2,15 @@
 
 **Last updated: 18 July 2026** · Applies to AuraBoard for Windows, all versions.
 
+AuraBoard is a product of **DexForge** (<https://dexforge.iamdex.codes>), which publishes
+and maintains it. DexForge is the party this policy refers to as "we".
+
 ## Summary
 
 **AuraBoard collects nothing.** There is no account, no server, no telemetry, no
-analytics, and no crash reporting. The developer receives no data from your
-installation — not usage statistics, not error reports, not even a count of launches.
+analytics, and no crash reporting. **DexForge receives no data from your installation** —
+not usage statistics, not error reports, not even a count of launches. We operate no
+backend for this product, so there is nothing for us to collect data into.
 
 Everything you configure stays on your own machine.
 
@@ -35,7 +39,7 @@ Uninstalling removes the application. To also remove your settings, delete
 
 AuraBoard has no backend. Widgets call public APIs **directly from your computer**,
 so those services see your IP address the same way any website you visit does. The
-developer operates no server and cannot see these requests.
+DexForge operates no server and cannot see these requests.
 
 Connections are made only for widgets you have enabled:
 
@@ -83,7 +87,9 @@ notes for the version they take effect in.
 
 ## Contact
 
-Questions: open an issue at
+AuraBoard is published by **DexForge** — <https://dexforge.iamdex.codes>.
+
+Questions or privacy requests: open an issue at
 <https://github.com/dexisworking/AuraBoard/issues>.
 
 The full source is available at <https://github.com/dexisworking/AuraBoard> — every

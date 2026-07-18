@@ -4,12 +4,15 @@
 
 **Your idle screen, turned into a dashboard.**
 
+A product by **[DexForge](https://dexforge.iamdex.codes)**
+
 AuraBoard replaces the blank Windows screensaver with a designed ambient display —
 a full-screen photo or video slideshow with live widgets laid out exactly how you want them.
 
 [![Download](https://img.shields.io/badge/Download-Windows%20Installer-FF2B12?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/dexisworking/auraboard/releases/latest)
 [![Release](https://img.shields.io/github/v/release/dexisworking/auraboard?style=for-the-badge&color=1a1a1a&labelColor=1a1a1a)](https://github.com/dexisworking/auraboard/releases)
 [![License](https://img.shields.io/badge/License-MIT-1a1a1a?style=for-the-badge)](LICENSE)
+[![DexForge](https://img.shields.io/badge/by-DexForge-1a1a1a?style=for-the-badge)](https://dexforge.iamdex.codes)
 [![Platform](https://img.shields.io/badge/Windows-10%20%7C%2011-1a1a1a?style=for-the-badge&logo=windows&logoColor=white)](#installation)
 
 </div>
@@ -189,7 +192,16 @@ each widget contacts and when.
 
 ## License
 
-[MIT](LICENSE) © dexisworking
+[MIT](LICENSE) © 2026 [DexForge](https://dexforge.iamdex.codes)
 
 The MIT licence covers AuraBoard's source code. Any wallpapers, artwork or media you
 add remain under their own licences.
+
+---
+
+<div align="center">
+
+**AuraBoard** is built and maintained by **[DexForge](https://dexforge.iamdex.codes)** —
+secure software engineering and product development.
+
+</div>

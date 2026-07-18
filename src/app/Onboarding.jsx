@@ -110,6 +110,11 @@ export default function Onboarding({ onComplete }) {
         <div className="flex-1 flex flex-col justify-center min-h-0">
           {step === 0 && (
             <>
+              {/* First run is the one moment where establishing provenance is
+                  appropriate — seen once per install, never again. */}
+              <p className="text-[11px] font-micro font-semibold uppercase tracking-[0.24em] text-accent mb-3">
+                AuraBoard — a DexForge product
+              </p>
               <h1 className="ab-display" style={{ fontSize: 'min(11vw, 96px)', lineHeight: 0.9 }}>
                 Welcome
               </h1>

@@ -91,7 +91,7 @@ export async function fetchJson(url, { timeoutMs = 12_000, headers } = {}) {
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'AuraBoard/1.0 (ambient display)', ...headers },
+      headers: { 'User-Agent': 'AuraBoard/1.0 (ambient display; +https://dexforge.iamdex.codes)', ...headers },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();

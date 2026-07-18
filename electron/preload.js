@@ -162,4 +162,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   /** Fetch a stock quote via yahoo-finance2 in the main process. */
   fetchStockQuote: (symbol) => ipcRenderer.invoke('fetch-stock-quote', symbol),
+
+  /**
+   * Open an allowlisted https URL in the user's default browser.
+   * Main validates the URL; a refused link resolves { success: false }.
+   * @param {string} url
+   * @returns {Promise<{success:boolean, error?:string}>}
+   */
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
 });

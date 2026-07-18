@@ -1,6 +1,10 @@
+# appId is the NSIS upgrade identity — NSIS derives the uninstall GUID from it.
+# Changing it makes new installers install ALONGSIDE existing copies rather than
+# upgrading them, and turns auto-update into a silent duplicate install. It is
+# deliberately unchanged by the DexForge rebrand.
 appId: com.auraboard.app
 productName: AuraBoard
-copyright: Copyright © 2026 AuraBoard
+copyright: Copyright © 2026 DexForge
 
 # Two update lanes on one repo. The standard (no-packs) build stays on `latest`;
 # `build:win` overrides this to `predefined` via -c.publish.channel, which both

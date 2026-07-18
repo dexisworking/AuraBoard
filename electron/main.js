@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, powerMonitor, nativeImage, dialog, screen, protocol, net, session, safeStorage } from 'electron';
+import { app, BrowserWindow, Tray, Menu, ipcMain, powerMonitor, nativeImage, dialog, screen, protocol, net, session, safeStorage, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
@@ -137,6 +137,20 @@ function registerMediaProtocol() {
     }
   });
 }
+
+/* ── External links ───────────────────────────────────────────────────────
+ * Hosts the renderer may ask the OS browser to open. An allowlist rather than
+ * a bare protocol check: handing a renderer-supplied string straight to
+ * shell.openExternal is the classic Electron escalation path (file://, smb://,
+ * ms-msdt: and friends). Same idiom as getAllowedMediaRoots() above.
+ *
+ * NOT related to the CSP below — openExternal hands off to the OS browser, so
+ * these hosts must NOT be added to connect-src.
+ */
+const EXTERNAL_HOSTS = new Set([
+  'dexforge.iamdex.codes',
+  'github.com',
+]);
 
 /* ── Content Security Policy ──────────────────────────────────────────────
  * connect-src lists only the data sources the widgets actually use. Anything
@@ -1068,6 +1082,25 @@ function setupIPC() {
     app.isQuitting = true;
     setImmediate(() => autoUpdater.quitAndInstall());
     return { success: true };
+  });
+
+  /**
+   * Open an allowlisted https URL in the user's default browser.
+   *
+   * Validation stays here in main — never trust the renderer's string. Anything
+   * that is not https, or whose host is not in EXTERNAL_HOSTS, is refused rather
+   * than passed to the shell.
+   */
+  ipcMain.handle('open-external', async (_event, url) => {
+    try {
+      const parsed = new URL(String(url));
+      if (parsed.protocol !== 'https:') return { success: false, error: 'Not https' };
+      if (!EXTERNAL_HOSTS.has(parsed.host)) return { success: false, error: 'Host not allowed' };
+      await shell.openExternal(parsed.href);
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Invalid URL' };
+    }
   });
 
   // Per-widget config (variant + instance settings), keyed by widget id.

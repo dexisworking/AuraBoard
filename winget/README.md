@@ -3,14 +3,14 @@
 Manifests for publishing AuraBoard to the Windows Package Manager, so users can run:
 
 ```
-winget install dexisworking.AuraBoard
+winget install DexForge.AuraBoard
 ```
 
-`manifests/d/dexisworking/AuraBoard/<version>/` holds the three files winget requires
+`manifests/d/DexForge/AuraBoard/<version>/` holds the three files winget requires
 (version, installer, locale). They are validated with:
 
 ```bash
-winget validate --manifest winget/manifests/d/dexisworking/AuraBoard/1.0.0
+winget validate --manifest winget/manifests/d/DexForge/AuraBoard/1.0.0
 ```
 
 ## Publishing
@@ -22,7 +22,7 @@ for you:
 
 ```bash
 winget install Microsoft.WingetCreate
-wingetcreate submit --token <github-pat> winget/manifests/d/dexisworking/AuraBoard/1.0.0
+wingetcreate submit --token <github-pat> winget/manifests/d/DexForge/AuraBoard/1.0.0
 ```
 
 Or fork `winget-pkgs`, copy the folder to the same path, and open a PR by hand.

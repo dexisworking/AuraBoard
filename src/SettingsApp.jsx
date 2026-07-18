@@ -4,6 +4,7 @@ import { getAllWidgets } from './widgets/registry';
 import { FONT_PRESETS, THEME_PRESETS } from './theme/presets';
 import { applyTheme } from './theme/applyTheme';
 import Onboarding from './app/Onboarding';
+import DexForgeCredit from './ui/DexForgeCredit';
 
 function formatInterval(seconds) {
   if (seconds < 60) {
@@ -155,6 +156,11 @@ export default function SettingsApp() {
   // settings (or Calendar's own variant/use24hr) written by the Layout Editor.
   const [widgetConfig, setWidgetConfig] = useState({});
   const [calendarIcsUrl, setCalendarIcsUrl] = useState('');
+  // Update status is polled, not pushed — main keeps it in a variable and there
+  // is no webContents.send for it. Read once on mount, then tick only while a
+  // download is actually in flight so the percentage advances.
+  const [updateStatus, setUpdateStatus] = useState(null);
+  const [isInstalling, setIsInstalling] = useState(false);
   const [photoTreatment, setPhotoTreatment] = useState('mono');
   const [timeOfDayPalette, setTimeOfDayPalette] = useState(false);
   const [posterMomentInterval, setPosterMomentInterval] = useState(0);
@@ -280,6 +286,28 @@ export default function SettingsApp() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const read = async () => {
+      try {
+        const status = await window.electronAPI?.getUpdateStatus?.();
+        if (!cancelled && status) setUpdateStatus(status);
+      } catch {
+        /* non-fatal — the About panel just shows nothing */
+      }
+    };
+
+    read();
+    // Only poll while a download is in flight; idle states don't change on their own.
+    if (updateStatus?.state !== 'downloading') return () => { cancelled = true; };
+    const id = window.setInterval(read, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [updateStatus?.state]);
+
+  useEffect(() => {
     if (!isPreviewing) {
       return undefined;
     }
@@ -322,6 +350,37 @@ export default function SettingsApp() {
     } finally {
       setSwitchingPack('');
       window.setTimeout(() => setSaveMessage(''), 3000);
+    }
+  };
+
+  /* Update state → caption. 'disabled' is what main returns in dev
+     (main.js sets it when !app.isPackaged), so handle it explicitly or the
+     panel looks broken in the environment it gets developed in. */
+  const updateLabel = useMemo(() => {
+    const s = updateStatus?.state;
+    if (!s) return 'Checking…';
+    if (s === 'disabled') return 'Development build';
+    if (s === 'checking') return 'Checking for updates…';
+    if (s === 'downloading') {
+      const pct = Number.isFinite(updateStatus?.percent) ? Math.round(updateStatus.percent) : null;
+      return pct === null ? 'Downloading update…' : `Downloading update — ${pct}%`;
+    }
+    if (s === 'ready') {
+      return updateStatus?.version ? `Update ${updateStatus.version} ready` : 'Update ready';
+    }
+    if (s === 'error') return updateStatus?.error || 'Update check failed';
+    if (s === 'current') return 'Up to date';
+    return 'Up to date';
+  }, [updateStatus]);
+
+  const handleInstallUpdate = async () => {
+    setIsInstalling(true);
+    try {
+      const res = await window.electronAPI?.installUpdateNow?.();
+      // Success quits the app, so reaching here at all means it did not.
+      if (!res?.success) setIsInstalling(false);
+    } catch {
+      setIsInstalling(false);
     }
   };
 
@@ -563,9 +622,20 @@ export default function SettingsApp() {
           className="h-12 w-full flex items-center justify-between px-6 shrink-0 border-b"
           style={{ WebkitAppRegion: 'drag', borderColor: 'var(--ab-rule)' }}
         >
-          <p className="text-[11px] font-micro font-semibold uppercase tracking-[0.28em] text-accent">
-            AuraBoard
-          </p>
+          {/* Non-interactive by design: this bar is the window drag handle
+              (WebkitAppRegion: drag) and .no-drag is not defined in
+              settings.html, so a clickable credit here would carve a dead zone
+              out of it. The clickable mark lives in the About section. */}
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] font-micro font-semibold uppercase tracking-[0.28em] text-accent">
+              AuraBoard
+            </p>
+            <span
+              aria-hidden="true"
+              style={{ width: 1, height: 11, background: 'var(--ab-rule-strong)', opacity: 0.5 }}
+            />
+            <DexForgeCredit variant="micro" />
+          </div>
           <p className="text-[11px] font-micro font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
             Configuration
           </p>
@@ -1305,6 +1375,58 @@ export default function SettingsApp() {
                     ))}
                   </div>
                 </div>
+              </div>
+            </section>
+
+            {/* About Section — version, update state, and attribution.
+                Sits above Bottom Actions so the save row stays the last thing
+                on the page. */}
+            <section className="border border-surface-border bg-surface p-7 ab-reveal ab-reveal-d8">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold uppercase tracking-[0.02em] text-ink font-ui">
+                  About
+                </h2>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-ink-tertiary font-micro">
+                  Version, updates and credits.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-ink">
+                    AuraBoard
+                  </span>
+                  <span
+                    className="text-ink"
+                    style={{
+                      fontFamily: 'var(--ab-font-numeric, inherit)',
+                      fontVariantNumeric: 'tabular-nums',
+                      fontSize: 15,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {updateStatus?.current ? `v${updateStatus.current}` : '—'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-[10px] font-micro font-semibold uppercase tracking-[0.18em] text-ink-tertiary">
+                    {updateLabel}
+                  </span>
+                  {updateStatus?.state === 'ready' && (
+                    <button
+                      onClick={handleInstallUpdate}
+                      disabled={isInstalling}
+                      className="bg-accent text-[color:var(--ab-accent-ink)] px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] font-micro transition-opacity hover:opacity-90 disabled:opacity-60"
+                    >
+                      {isInstalling ? 'Restarting…' : 'Restart & install'}
+                    </button>
+                  )}
+                </div>
+
+                <hr className="border-[color:var(--ab-rule)]" />
+
+                <DexForgeCredit variant="wordmark" />
               </div>
             </section>
 

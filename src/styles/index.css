@@ -11,7 +11,10 @@
  *                              it ships the width axis (62–125) that produces
  *                              the condensed Druk-like cut at wdth 62–75.
  *   JetBrains Mono Variable  — micro captions, tracked-out caps
- *   Inter Variable           — legacy fallback during migration
+ *   Inter Variable           — legacy fallback during migration, AND the
+ *                              DexForge wordmark in src/ui/DexForgeCredit.jsx,
+ *                              whose brand face is Inter 800. Do not drop this
+ *                              import when the legacy aliases are retired.
  */
 
 @import '@fontsource/anton';
@@ -136,6 +139,7 @@
   .ab-reveal-d5 { animation-delay: 300ms; }
   .ab-reveal-d6 { animation-delay: 360ms; }
   .ab-reveal-d7 { animation-delay: 420ms; }
+  .ab-reveal-d8 { animation-delay: 480ms; }
 
   /* Hover lift: micro vertical shift for cards, buttons, preset tiles */
   .ab-hover-lift {

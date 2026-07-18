@@ -1,15 +1,15 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
-PackageIdentifier: dexisworking.AuraBoard
+PackageIdentifier: DexForge.AuraBoard
 PackageVersion: 1.0.0
 PackageLocale: en-US
-Publisher: dexisworking
-PublisherUrl: https://github.com/dexisworking
+Publisher: DexForge
+PublisherUrl: https://dexforge.iamdex.codes
 PublisherSupportUrl: https://github.com/dexisworking/AuraBoard/issues
 PackageName: AuraBoard
 PackageUrl: https://github.com/dexisworking/AuraBoard
 License: MIT
 LicenseUrl: https://github.com/dexisworking/AuraBoard/blob/main/LICENSE
-Copyright: Copyright (c) 2026 dexisworking
+Copyright: Copyright (c) 2026 DexForge
 ShortDescription: Turn your idle Windows screen into a designed ambient dashboard.
 Description: |-
   AuraBoard replaces the blank Windows screensaver with a designed ambient display:
