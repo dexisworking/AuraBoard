@@ -153,8 +153,8 @@ AuraBoard is an Electron app with a React renderer.
 |---|---|
 | `npm run dev` | Development with live reload |
 | `npm run build` | Build app bundles |
-| `npm run build:win` | Windows installer (syncs packs first) |
-| `npm run build:win:nopacks` | Windows installer with empty packs — use for distribution |
+| `npm run build:win` | Windows installer with packs bundled, named `-predefined` |
+| `npm run build:win:nopacks` | Windows installer with empty packs |
 | `npm run packs:sync` | Copy pack media from source folders into `packs/` |
 | `npm run lint` | ESLint |
 
