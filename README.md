@@ -14,6 +14,7 @@ a full-screen photo or video slideshow with live widgets laid out exactly how yo
 [![License](https://img.shields.io/badge/License-MIT-1a1a1a?style=for-the-badge)](LICENSE)
 [![DexForge](https://img.shields.io/badge/by-DexForge-1a1a1a?style=for-the-badge)](https://dexforge.iamdex.codes)
 [![Platform](https://img.shields.io/badge/Windows-10%20%7C%2011-1a1a1a?style=for-the-badge&logo=windows&logoColor=white)](#installation)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/dexisworking)
 
 </div>
 
@@ -195,6 +196,11 @@ AuraBoard has no server, no account, no telemetry and no analytics. Settings sta
 `%APPDATA%\auraboard\`, and widgets call public APIs directly from your machine — the
 developer receives nothing. See [PRIVACY.md](PRIVACY.md) for the full breakdown of what
 each widget contacts and when.
+
+## Support
+
+AuraBoard is free and open source. If it earns a place on your screen, you can support
+development at **[buymeacoffee.com/dexisworking](https://buymeacoffee.com/dexisworking)** ☕
 
 ## License
 
